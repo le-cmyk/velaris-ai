@@ -7,7 +7,7 @@ import type {
   WorkspaceInfo,
 } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -38,6 +38,9 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 async function fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
+  if (!API_URL) {
+    throw new Error('NEXT_PUBLIC_API_URL is not configured.');
+  }
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -58,6 +61,15 @@ interface LoginResponse {
   token?: string;
   access_token?: string;
   user: User;
+}
+
+interface ApprovalActionResponse {
+  approval_id: string;
+  status: ApprovalRequest['status'];
+}
+
+interface AuditLogsResponse {
+  items: AuditLogEntry[];
 }
 
 export const api = {
@@ -92,20 +104,41 @@ export const api = {
   approveAction: async (approvalId: string): Promise<ApprovalRequest> => {
     const response = await fetchWithAuth(`/approvals/${approvalId}/approve`, {
       method: 'POST',
+      body: JSON.stringify({ decision: 'approve' }),
     });
-    return parseResponse<ApprovalRequest>(response);
+    const data = await parseResponse<ApprovalActionResponse>(response);
+    return {
+      id: data.approval_id,
+      run_id: '',
+      tool_call_id: '',
+      requested_action: '',
+      reason: null,
+      status: data.status,
+      created_at: new Date().toISOString(),
+    };
   },
 
   rejectAction: async (approvalId: string): Promise<ApprovalRequest> => {
     const response = await fetchWithAuth(`/approvals/${approvalId}/reject`, {
       method: 'POST',
+      body: JSON.stringify({ decision: 'reject' }),
     });
-    return parseResponse<ApprovalRequest>(response);
+    const data = await parseResponse<ApprovalActionResponse>(response);
+    return {
+      id: data.approval_id,
+      run_id: '',
+      tool_call_id: '',
+      requested_action: '',
+      reason: null,
+      status: data.status,
+      created_at: new Date().toISOString(),
+    };
   },
 
   getAuditLogs: async (): Promise<AuditLogEntry[]> => {
     const response = await fetchWithAuth('/audit-logs');
-    return parseResponse<AuditLogEntry[]>(response);
+    const payload = await parseResponse<AuditLogsResponse>(response);
+    return payload.items;
   },
 
   getTools: async (): Promise<ToolInfo[]> => {

@@ -29,7 +29,7 @@ export interface ChatResponse {
   run_id: string;
   message: string;
   intent: string;
-  execution_plan: string[];
+  execution_plan: Record<string, unknown> | null;
   tool_calls: ToolCallResult[];
   pending_approvals: ApprovalRequest[];
   status: string;

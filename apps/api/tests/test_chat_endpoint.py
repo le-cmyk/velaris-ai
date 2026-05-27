@@ -22,7 +22,8 @@ class TestChatEndpointBehavior:
         response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"
+        assert data["status"] in {"ok", "degraded"}
+        assert "services" in data
         assert "version" in data
 
     def test_chat_requires_auth(self, client: TestClient) -> None:
@@ -51,6 +52,11 @@ class TestChatEndpointBehavior:
     def test_tools_requires_auth(self, client: TestClient) -> None:
         """GET /tools without a token should return 401."""
         response = client.get("/tools")
+        assert response.status_code == 401
+
+    def test_runs_requires_auth(self, client: TestClient) -> None:
+        """GET /runs/{id} without a token should return 401."""
+        response = client.get(f"/runs/{uuid.uuid4()}")
         assert response.status_code == 401
 
     def test_login_with_bad_credentials_returns_401(self, client: TestClient) -> None:

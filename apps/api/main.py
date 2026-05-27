@@ -1,16 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from redis import asyncio as redis_asyncio
+from sqlalchemy import text
 
 from app.config import client_config
+from app.database import engine
+from app.config import settings
 from app.routers import approvals, audit_logs, auth, chat, runs, tools, workspace
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Velaris AI API", version="0.1.0")
 
-    cors_origins = client_config.get("cors_origins", ["http://localhost:3000"])
-    if "http://localhost:3000" not in cors_origins:
-        cors_origins.append("http://localhost:3000")
+    cors_origins = settings.cors_origins or client_config.get("cors_origins", [])
 
     app.add_middleware(
         CORSMiddleware,
@@ -28,9 +30,38 @@ def create_app() -> FastAPI:
     app.include_router(tools.router, prefix="/tools", tags=["tools"])
     app.include_router(workspace.router, prefix="/workspace", tags=["workspace"])
 
+    async def _service_health() -> dict[str, str]:
+        database_status = "ok"
+        redis_status = "ok"
+        try:
+            async with engine.connect() as connection:
+                await connection.execute(text("SELECT 1"))
+        except Exception:
+            database_status = "error"
+
+        redis_client = redis_asyncio.from_url(settings.redis_url, decode_responses=True)
+        try:
+            await redis_client.ping()
+        except Exception:
+            redis_status = "error"
+        finally:
+            await redis_client.aclose()
+
+        status = "ok" if database_status == "ok" and redis_status == "ok" else "degraded"
+        return {
+            "status": status,
+            "version": "0.1.0",
+            "environment": settings.environment,
+            "services": {"database": database_status, "redis": redis_status},
+        }
+
     @app.get("/health")
-    async def health() -> dict[str, str]:
-        return {"status": "ok", "version": "0.1.0"}
+    async def health() -> dict:
+        return await _service_health()
+
+    @app.get("/api/health")
+    async def api_health() -> dict:
+        return await _service_health()
 
     return app
 

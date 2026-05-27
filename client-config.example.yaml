@@ -1,0 +1,42 @@
+# Velaris AI - Client Configuration
+# Copy this file to client-config.yaml and customize for your deployment
+
+client:
+  name: example-client
+  environment: local
+  description: "Example Velaris AI deployment"
+
+security:
+  # If true, all database operations are read-only by default
+  readonly_by_default: true
+  
+  # Actions that require human approval before execution
+  require_approval_for:
+    - database_write
+    - send_email
+    - delete_file
+    - external_api_write
+
+tools:
+  postgres_query:
+    enabled: true
+    readonly: true
+    description: "Execute SQL queries against PostgreSQL"
+    max_rows: 1000
+
+agents:
+  - name: data_analyst
+    enabled: true
+    description: "Analyze data from connected databases"
+    tools:
+      - postgres_query
+    
+  - name: summarizer
+    enabled: true
+    description: "Summarize and report on data"
+    tools:
+      - postgres_query
+
+workspace:
+  name: "Demo Workspace"
+  slug: "demo"

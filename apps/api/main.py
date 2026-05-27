@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis import asyncio as redis_asyncio
@@ -7,6 +9,8 @@ from app.config import client_config
 from app.database import engine
 from app.config import settings
 from app.routers import approvals, audit_logs, auth, chat, runs, tools, workspace
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -36,13 +40,15 @@ def create_app() -> FastAPI:
         try:
             async with engine.connect() as connection:
                 await connection.execute(text("SELECT 1"))
-        except Exception:
+        except Exception as exc:
+            logger.warning("Database health check failed: %s", exc)
             database_status = "error"
 
         redis_client = redis_asyncio.from_url(settings.redis_url, decode_responses=True)
         try:
             await redis_client.ping()
-        except Exception:
+        except Exception as exc:
+            logger.warning("Redis health check failed: %s", exc)
             redis_status = "error"
         finally:
             await redis_client.aclose()

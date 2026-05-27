@@ -77,6 +77,8 @@ def load_client_config() -> dict[str, Any]:
     configured_path = Path(settings.client_config_path)
     if not configured_path.is_absolute():
         current = Path(__file__).resolve().parent
+        # Search from api directory upward so CLIENT_CONFIG_PATH can be set
+        # relative to either apps/api or repository root.
         candidates = [current.parent / configured_path]
         candidates.extend(parent / configured_path for parent in current.parents)
         configured_path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])

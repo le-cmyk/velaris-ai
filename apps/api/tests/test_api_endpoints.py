@@ -367,7 +367,7 @@ class TestGatewayExecutionBehavior:
     async def test_unknown_tool_is_blocked(self) -> None:
         gateway = ToolGateway(client_config={"tools": {}}, mcp_interface=MCPInterface())
         db = AsyncMock()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="not configured"):
             await gateway.execute(
                 tool_name="unknown_tool",
                 arguments={},

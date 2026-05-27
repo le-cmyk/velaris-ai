@@ -6,13 +6,19 @@ interface ExecutionTimelineProps {
   toolCallsCount: number;
 }
 
+function extractExecutionSteps(executionPlan: Record<string, unknown> | null): string[] {
+  if (!executionPlan || typeof executionPlan !== 'object') {
+    return [];
+  }
+  const maybeSteps = (executionPlan as { steps?: unknown }).steps;
+  if (!Array.isArray(maybeSteps)) {
+    return [];
+  }
+  return maybeSteps.filter((step): step is string => typeof step === 'string');
+}
+
 export function ExecutionTimeline({ intent, executionPlan, toolCallsCount }: ExecutionTimelineProps) {
-  const steps =
-    executionPlan &&
-    typeof executionPlan === 'object' &&
-    Array.isArray((executionPlan as { steps?: unknown }).steps)
-      ? ((executionPlan as { steps: unknown[] }).steps.filter((step) => typeof step === 'string') as string[])
-      : [];
+  const steps = extractExecutionSteps(executionPlan);
 
   const items = [
     {

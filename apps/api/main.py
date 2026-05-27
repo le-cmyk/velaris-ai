@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import client_config
-from app.routers import approvals, audit_logs, auth, chat, tools, workspace
+from app.routers import approvals, audit_logs, auth, chat, runs, tools, workspace
 
 
 def create_app() -> FastAPI:
@@ -22,7 +22,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/chat", tags=["chat"])
-    app.include_router(chat.router, prefix="/runs", tags=["runs"])
+    app.include_router(runs.router, prefix="/runs", tags=["runs"])
     app.include_router(approvals.router, prefix="/approvals", tags=["approvals"])
     app.include_router(audit_logs.router, prefix="/audit-logs", tags=["audit-logs"])
     app.include_router(tools.router, prefix="/tools", tags=["tools"])
@@ -30,7 +30,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        return {"status": "ok"}
+        return {"status": "ok", "version": "0.1.0"}
 
     return app
 

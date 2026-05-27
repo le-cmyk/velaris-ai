@@ -2,308 +2,258 @@
 
 > The agentic operating system for modern companies.
 
-Velaris AI is a secure, scalable, and deployable multi-agent AI platform designed to automate, orchestrate, and execute company workflows through intelligent agents, MCP-connected tools, and enterprise-grade infrastructure.
-
-The platform enables organizations to connect their databases, APIs, files, SaaS tools, and internal systems to autonomous AI agents capable of understanding, reasoning, and executing complex operational processes.
-
-Unlike traditional AI assistants, Velaris AI is designed as a true agentic platform:
-- agents can collaborate,
-- workflows can persist over time,
-- processes can be automated end-to-end,
-- and human approvals can be integrated directly into execution flows.
+Velaris AI is a portable, client-deployable agentic AI platform. It allows companies to deploy their own isolated AI instance with a web interface, backend API, agent runtime, workflow execution layer, MCP-connected tools, secure database access, audit logs, and human approval before risky actions.
 
 ---
 
-# Vision
+## Quick Start
 
-Velaris AI aims to become the operational intelligence layer for companies.
+### Prerequisites
 
-The goal is to provide an infrastructure where AI agents can:
-- understand business context,
-- interact securely with enterprise systems,
-- orchestrate workflows,
-- execute operational tasks,
-- and continuously improve business processes.
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 
-Velaris AI is built for:
-- scalability,
-- modularity,
-- security,
-- observability,
-- and client-by-client deployment.
+### 1. Clone the repository
 
-Each client can deploy an isolated Velaris AI instance connected to their own infrastructure, databases, APIs, and internal tools.
+```bash
+git clone https://github.com/le-cmyk/velaris-ai.git
+cd velaris-ai
+```
 
----
+### 2. Configure environment
 
-# Core Features
+```bash
+cp .env.example .env
+```
 
-## Multi-Agent Architecture
+Edit `.env` to set a strong `SECRET_KEY` for production. The defaults work for local development.
 
-Velaris AI supports multiple specialized agents working together across workflows and operational tasks.
+### 3. Start the platform
 
-Examples:
-- Data Analyst Agent
-- Reporting Agent
-- Security Agent
-- DevOps Agent
-- Workflow Automation Agent
-- Internal Knowledge Agent
+```bash
+docker compose up --build
+```
 
-Agents can:
-- collaborate,
-- delegate tasks,
-- share context,
-- and operate within controlled permission boundaries.
+This starts:
+| Service | URL |
+|---------|-----|
+| Web frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| API docs (Swagger) | http://localhost:8000/docs |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
 
----
+### 4. Log in
 
-## MCP-Based Tool Integration
+Open http://localhost:3000 and log in with the demo account:
 
-Velaris AI uses the Model Context Protocol (MCP) to standardize communication between agents and external tools.
+| Field | Value |
+|-------|-------|
+| Email | `demo@velaris.ai` |
+| Password | `demo123` |
 
-MCP servers can connect agents to:
-- PostgreSQL
-- MySQL
-- APIs
-- File systems
-- Slack
-- GitHub
-- CRMs
-- Internal enterprise systems
-- Cloud platforms
-- SaaS applications
+### 5. Try it out
 
-This architecture allows Velaris AI to remain modular, extensible, and infrastructure-agnostic.
+In the **Chat** interface, send a message like:
 
----
+> Show me the list of customers in the database.
 
-## Workflow Orchestration
+You will see:
+- The assistant response
+- The classified intent (`database_read`)
+- The execution plan steps
+- The tool call (`postgres_query`) and its result
 
-Velaris AI is designed around durable workflows rather than simple chat interactions.
+Try a write request to trigger the approval workflow:
 
-The platform supports:
-- long-running workflows,
-- stateful execution,
-- retries,
-- approvals,
-- checkpoints,
-- scheduling,
-- and multi-step process automation.
+> Delete all inactive users.
 
-Examples:
-- automatic report generation,
-- onboarding workflows,
-- security investigations,
-- operational monitoring,
-- automated data analysis,
-- AI-assisted ticket handling,
-- infrastructure automation.
+This creates a pending approval in the **Approvals** panel that you can approve or reject.
 
 ---
 
-## Human-in-the-Loop Validation
+## Architecture
 
-Critical actions can require manual approval before execution.
+```
+Next.js Frontend (port 3000)
+        ↓
+FastAPI Backend API (port 8000)
+        ↓
+Agent Runtime  (intent classification → execution plan)
+        ↓
+Tool Gateway   (security checks, approval enforcement, audit logging)
+        ↓
+MCP Tool Layer (postgres_query mock — MCP SDK-ready)
+        ↓
+PostgreSQL / Redis
+```
 
-Examples:
-- database write operations,
-- email sending,
-- infrastructure changes,
-- file deletion,
-- production deployments.
+### Key modules
 
-This ensures operational safety and enterprise compliance.
+| Path | Purpose |
+|------|---------|
+| `apps/web/` | Next.js 14 frontend — dashboard, chat, approvals, audit logs |
+| `apps/api/` | FastAPI backend — all REST endpoints, JWT auth, migrations |
+| `apps/api/app/agent/` | Agent runtime — intent classification, execution planning |
+| `apps/api/app/gateway/` | Tool Gateway — SQL safety checker, approval enforcement |
+| `apps/api/app/mcp/` | MCP-ready tool abstraction + mock `postgres_query` tool |
+| `deployments/docker-compose/` | Docker Compose with init SQL |
+| `packages/shared-types/` | Shared TypeScript types |
+| `packages/prompts/` | System prompts for agents |
+| `docs/` | Architecture and API reference |
 
 ---
 
-## Enterprise Security
+## API Reference
 
-Velaris AI is designed with security as a core principle.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| POST | `/auth/login` | Login, returns JWT |
+| GET | `/workspace` | Workspace info |
+| POST | `/chat` | Send message to agent |
+| GET | `/runs/{run_id}` | Get agent run details |
+| GET | `/approvals` | List pending approvals |
+| POST | `/approvals/{id}/approve` | Approve a pending action |
+| POST | `/approvals/{id}/reject` | Reject a pending action |
+| GET | `/audit-logs` | Paginated audit log |
+| GET | `/tools` | List available tools |
 
-Features include:
-- role-based access control (RBAC),
-- audit logging,
-- permission isolation,
-- workspace separation,
-- secure tool execution,
-- secret management,
-- approval systems,
-- API security,
-- isolated client deployments.
-
-Agents never directly access infrastructure resources without passing through controlled gateways.
-
----
-
-## Isolated Client Deployments
-
-Velaris AI is designed to be easily deployable for individual clients.
-
-Each client instance can run independently with:
-- isolated databases,
-- isolated agents,
-- isolated permissions,
-- isolated infrastructure,
-- isolated secrets,
-- isolated workflows.
-
-Deployment can be done through:
-- Docker Compose,
-- Kubernetes,
-- Helm charts,
-- cloud infrastructure,
-- or on-premise environments.
+Full Swagger UI available at http://localhost:8000/docs when running.
 
 ---
 
-# Architecture Overview
+## Security
 
-```txt
-Frontend (Next.js)
-        ↓
-API Gateway
-        ↓
-Authentication & Permission Layer
-        ↓
-Workflow Engine
-        ↓
-Agent Runtime
-        ↓
-Tool Gateway
-        ↓
-MCP Client Layer
-        ↓
-MCP Servers
-        ↓
-Databases / APIs / SaaS / Enterprise Systems
+- **JWT authentication** — HS256 tokens, configurable expiry
+- **Bcrypt password hashing** — all passwords hashed with passlib
+- **Read-only by default** — only `SELECT` queries execute without approval
+- **Approval workflow** — `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE` require explicit human approval
+- **Audit logs** — every login, tool call, and approval decision is logged
+- **Workspace isolation** — all database tables include `workspace_id` for tenant separation
+- **No hardcoded secrets** — all credentials from `.env`
+
+---
+
+## Client Configuration
+
+Copy `client-config.example.yaml` to `client-config.yaml` to customise the deployment:
+
+```yaml
+client:
+  name: my-company
+  environment: production
+
+security:
+  readonly_by_default: true
+  require_approval_for:
+    - database_write
+    - send_email
+
+tools:
+  postgres_query:
+    enabled: true
+    readonly: true
+
+agents:
+  - name: data_analyst
+    enabled: true
+    tools:
+      - postgres_query
+```
+
+The backend loads this file at startup and merges it with safe defaults.
+
+---
+
+## Development
+
+### Backend (FastAPI)
+
+```bash
+cd apps/api
+pip install -r requirements.txt
+
+# Run with hot reload
+uvicorn main:app --reload
+
+# Run tests
+python -m pytest tests/ -v
+```
+
+### Frontend (Next.js)
+
+```bash
+cd apps/web
+npm install --legacy-peer-deps
+
+# Run dev server
+npm run dev
+
+# Build
+npm run build
+```
+
+### Database migrations
+
+```bash
+cd apps/api
+alembic upgrade head
 ```
 
 ---
 
-# Technical Stack
+## Repository Structure
 
-## Frontend
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-
-## Backend
-- FastAPI
-- Python
-
-## Agent Runtime
-- LangGraph
-- OpenAI Agents SDK
-
-## Workflow Engine
-- Temporal
-
-## Databases
-- PostgreSQL
-- pgvector
-
-## Infrastructure
-- Docker
-- Docker Compose
-- Kubernetes
-- Helm
-
-## Security
-- Keycloak / SSO
-- RBAC
-- Secret Management
-
-## Observability
-- OpenTelemetry
-- Grafana
-- Langfuse
+```
+velaris-ai/
+├── apps/
+│   ├── web/                  # Next.js frontend
+│   └── api/                  # FastAPI backend
+│       ├── app/
+│       │   ├── agent/        # Agent runtime
+│       │   ├── gateway/      # Tool Gateway
+│       │   ├── mcp/          # MCP tool layer
+│       │   ├── models/       # SQLAlchemy ORM models
+│       │   ├── routers/      # FastAPI route handlers
+│       │   └── schemas/      # Pydantic request/response schemas
+│       ├── alembic/          # Database migrations
+│       └── tests/            # Unit tests
+├── services/
+│   ├── agent-runtime/        # (future) standalone agent service
+│   ├── tool-gateway/         # (future) standalone gateway service
+│   ├── mcp-servers/          # (future) real MCP server implementations
+│   └── workers/              # (future) background workers
+├── packages/
+│   ├── shared-types/         # Shared TypeScript types
+│   ├── prompts/              # Agent system prompts
+│   └── evals/                # (future) evaluation harnesses
+├── deployments/
+│   └── docker-compose/       # Docker Compose + init SQL
+├── docs/                     # Architecture and API reference
+├── client-config.example.yaml
+├── .env.example
+└── docker-compose.yml        # Root-level convenience file
+```
 
 ---
 
-# Example Use Cases
+## Roadmap
 
-## Operations Automation
-Automate repetitive internal operational tasks through intelligent workflows and autonomous agents.
-
-## AI-Powered Data Analysis
-Allow teams to interact with company databases using natural language while maintaining strict security controls.
-
-## Internal AI Platform
-Provide companies with their own secure and deployable AI operating environment.
-
-## Security Investigations
-Automate log analysis, threat investigation, and incident workflows through specialized agents.
-
-## Knowledge Management
-Enable agents to search, summarize, and reason over internal documentation and enterprise knowledge bases.
+- [ ] Real LLM integration (OpenAI / Anthropic)
+- [ ] Real MCP SDK client/server connections
+- [ ] pgvector embeddings for memory search
+- [ ] Multi-agent collaboration
+- [ ] Visual workflow builder
+- [ ] Kubernetes / Helm deployment
+- [ ] RBAC and SSO (Keycloak)
+- [ ] OpenTelemetry observability
 
 ---
 
-# Deployment Philosophy
+## Demo credentials
 
-Velaris AI is designed with a modular deployment strategy.
+| Email | Password | Role |
+|-------|----------|------|
+| `demo@velaris.ai` | `demo123` | Admin |
 
-The platform can:
-- run locally,
-- run on a single Docker host,
-- scale through Kubernetes,
-- or be deployed on enterprise infrastructure.
-
-The preferred model is:
-- one isolated Velaris AI instance per client.
-
-This provides:
-- stronger security,
-- easier customization,
-- simplified compliance,
-- and better infrastructure isolation.
-
----
-
-# Project Goals
-
-- Build a scalable agentic infrastructure platform
-- Standardize enterprise AI workflow execution
-- Enable secure AI-to-system interaction
-- Simplify company process automation
-- Create reusable and deployable AI operational environments
-- Push the frontier of autonomous enterprise systems
-
----
-
-# Status
-
-Velaris AI is currently under active development.
-
-The platform architecture is focused on:
-- scalability,
-- modularity,
-- observability,
-- security,
-- and enterprise deployment readiness.
-
----
-
-# Future Roadmap
-
-- Visual workflow builder
-- Multi-agent collaboration engine
-- Autonomous workflow optimization
-- AI memory systems
-- Advanced observability dashboards
-- Marketplace for MCP connectors
-- Enterprise policy engine
-- Hybrid cloud deployments
-- Multi-model orchestration
-- Self-improving operational agents
-
----
-
-# Philosophy
-
-Velaris AI is not just an AI chatbot.
-
-It is an operational AI infrastructure layer designed to help companies build autonomous, scalable, and secure AI-driven systems.
+> **Note:** Change the demo password and `SECRET_KEY` before any non-local deployment.

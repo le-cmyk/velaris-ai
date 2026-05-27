@@ -6,12 +6,10 @@ describe('api client configuration', () => {
   });
 
   it('API client uses environment variable', async () => {
-    const fetchMock = jest.fn().mockResolvedValue(
-      new Response(JSON.stringify({ tools: [] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ tools: [] }),
+    } as Response);
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { api } = await import('@/lib/api');

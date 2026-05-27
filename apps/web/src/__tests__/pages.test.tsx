@@ -13,6 +13,11 @@ const replace = jest.fn();
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace }),
 }));
+jest.mock('next/image', () => {
+  const MockedImage = () => <span data-testid="next-image" />;
+  MockedImage.displayName = 'MockedImage';
+  return MockedImage;
+});
 
 jest.mock('@/lib/auth', () => ({
   isAuthenticated: jest.fn(() => false),

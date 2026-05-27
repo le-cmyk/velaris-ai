@@ -177,19 +177,43 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 
 # Run tests
-python -m pytest tests/ -v
+pytest
 ```
 
 ### Frontend (Next.js)
 
 ```bash
 cd apps/web
-npm install --legacy-peer-deps
+npm install
 
 # Run dev server
 npm run dev
 
+# Run tests
+npm test
+
 # Build
+npm run build
+```
+
+### GitHub Codespaces quick setup
+
+```bash
+# Install backend dependencies
+cd apps/api
+pip install -r requirements.txt
+
+# Run backend tests
+pytest
+
+# Install frontend dependencies
+cd ../web
+npm install
+
+# Run frontend tests
+npm test
+
+# Run frontend build
 npm run build
 ```
 
@@ -199,6 +223,22 @@ npm run build
 cd apps/api
 alembic upgrade head
 ```
+
+### Database init and demo seed (Railway/Codespaces)
+
+```bash
+cd apps/api
+python scripts/init_db.py --force
+python scripts/seed_demo_user.py --force
+```
+
+---
+
+## Deployment guides
+
+- Railway backend/database/Redis: `docs/deployment-railway.md`
+- Vercel frontend: `docs/deployment-vercel.md`
+- Final validation checklist: `docs/deployment-checklist.md`
 
 ---
 

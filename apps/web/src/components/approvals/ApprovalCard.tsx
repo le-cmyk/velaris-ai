@@ -24,10 +24,11 @@ export function ApprovalCard({ approval, onUpdated }: ApprovalCardProps) {
     setError(null);
 
     try {
-      const updated =
+      const actionResult =
         action === 'approve'
           ? await api.approveAction(currentApproval.id)
           : await api.rejectAction(currentApproval.id);
+      const updated = { ...currentApproval, id: actionResult.approval_id, status: actionResult.status };
       setCurrentApproval(updated);
       onUpdated?.(updated);
     } catch (err) {

@@ -2,11 +2,24 @@ import { Badge } from '@/components/ui/badge';
 
 interface ExecutionTimelineProps {
   intent: string;
-  executionPlan: string[];
+  executionPlan: Record<string, unknown> | null;
   toolCallsCount: number;
 }
 
+function extractExecutionSteps(executionPlan: Record<string, unknown> | null): string[] {
+  if (!executionPlan || typeof executionPlan !== 'object') {
+    return [];
+  }
+  const maybeSteps = (executionPlan as { steps?: unknown }).steps;
+  if (!Array.isArray(maybeSteps)) {
+    return [];
+  }
+  return maybeSteps.filter((step): step is string => typeof step === 'string');
+}
+
 export function ExecutionTimeline({ intent, executionPlan, toolCallsCount }: ExecutionTimelineProps) {
+  const steps = extractExecutionSteps(executionPlan);
+
   const items = [
     {
       title: 'Intent classification',
@@ -14,7 +27,7 @@ export function ExecutionTimeline({ intent, executionPlan, toolCallsCount }: Exe
     },
     {
       title: 'Execution plan',
-      description: executionPlan.length > 0 ? executionPlan.join(' · ') : 'No plan steps were returned for this run.',
+      description: steps.length > 0 ? steps.join(' · ') : 'No plan steps were returned for this run.',
     },
     {
       title: 'Tool calls',

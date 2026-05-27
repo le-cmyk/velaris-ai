@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     environment: str = Field(default="development", validation_alias=AliasChoices("ENVIRONMENT", "environment"))
-    cors_origins: list[str] = Field(default_factory=list, validation_alias=AliasChoices("CORS_ORIGINS", "cors_origins"))
+    cors_origins_raw: str = Field(
+        default="",
+        validation_alias=AliasChoices("CORS_ORIGINS", "cors_origins"),
+    )
     client_config_path: str = Field(
         default="client-config.yaml",
         validation_alias=AliasChoices("CLIENT_CONFIG_PATH", "client_config_path"),
@@ -41,16 +44,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value: Any) -> list[str]:
-        if value is None:
+    @property
+    def cors_origins(self) -> list[str]:
+        if not self.cors_origins_raw:
             return []
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        if isinstance(value, list):
-            return [str(item).strip() for item in value if str(item).strip()]
-        return []
+        return [origin.strip() for origin in self.cors_origins_raw.split(",") if origin.strip()]
 
 
 DEFAULT_CLIENT_CONFIG: dict[str, Any] = {

@@ -82,7 +82,12 @@ async def approve_action(
         )
     )
     await db.commit()
-    return {"approval_id": str(approval.id), "status": approval.status, "execution": execution}
+    # Return only safe, non-internal fields — never expose raw exception strings.
+    return {
+        "approval_id": str(approval.id),
+        "status": approval.status,
+        "execution_status": execution.get("status"),
+    }
 
 
 @router.post("/{approval_id}/reject")

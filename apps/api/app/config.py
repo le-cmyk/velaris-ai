@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
@@ -8,6 +9,8 @@ from typing import Any
 import yaml
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -84,6 +87,7 @@ def load_client_config() -> dict[str, Any]:
         configured_path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
     config_path = configured_path
     if not config_path.exists():
+        logger.warning("Client config file not found at %s. Falling back to default configuration.", config_path)
         return deepcopy(DEFAULT_CLIENT_CONFIG)
 
     with config_path.open("r", encoding="utf-8") as file:

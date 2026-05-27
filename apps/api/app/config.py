@@ -76,11 +76,10 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
 def load_client_config() -> dict[str, Any]:
     configured_path = Path(settings.client_config_path)
     if not configured_path.is_absolute():
-        base_api = Path(__file__).resolve().parents[1]
-        base_repo = Path(__file__).resolve().parents[3]
-        api_candidate = base_api / configured_path
-        repo_candidate = base_repo / configured_path
-        configured_path = api_candidate if api_candidate.exists() else repo_candidate
+        current = Path(__file__).resolve().parent
+        candidates = [current.parent / configured_path]
+        candidates.extend(parent / configured_path for parent in current.parents)
+        configured_path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
     config_path = configured_path
     if not config_path.exists():
         return deepcopy(DEFAULT_CLIENT_CONFIG)

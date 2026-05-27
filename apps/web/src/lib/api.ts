@@ -101,38 +101,20 @@ export const api = {
     return parseResponse<ApprovalRequest[]>(response);
   },
 
-  approveAction: async (approvalId: string): Promise<ApprovalRequest> => {
+  approveAction: async (approvalId: string): Promise<ApprovalActionResponse> => {
     const response = await fetchWithAuth(`/approvals/${approvalId}/approve`, {
       method: 'POST',
       body: JSON.stringify({ decision: 'approve' }),
     });
-    const data = await parseResponse<ApprovalActionResponse>(response);
-    return {
-      id: data.approval_id,
-      run_id: '',
-      tool_call_id: '',
-      requested_action: '',
-      reason: null,
-      status: data.status,
-      created_at: new Date().toISOString(),
-    };
+    return parseResponse<ApprovalActionResponse>(response);
   },
 
-  rejectAction: async (approvalId: string): Promise<ApprovalRequest> => {
+  rejectAction: async (approvalId: string): Promise<ApprovalActionResponse> => {
     const response = await fetchWithAuth(`/approvals/${approvalId}/reject`, {
       method: 'POST',
       body: JSON.stringify({ decision: 'reject' }),
     });
-    const data = await parseResponse<ApprovalActionResponse>(response);
-    return {
-      id: data.approval_id,
-      run_id: '',
-      tool_call_id: '',
-      requested_action: '',
-      reason: null,
-      status: data.status,
-      created_at: new Date().toISOString(),
-    };
+    return parseResponse<ApprovalActionResponse>(response);
   },
 
   getAuditLogs: async (): Promise<AuditLogEntry[]> => {

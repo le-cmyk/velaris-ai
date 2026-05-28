@@ -74,3 +74,20 @@ export interface WorkspaceInfo {
   name: string;
   slug?: string;
 }
+
+export interface ClientDataRecord {
+  id: string;
+  workspace_id: string;
+  type: string;
+  title: string;
+  content: string | null;
+  metadata_: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientDataListResponse {
+  items: ClientDataRecord[];
+  total: number;
+}
+

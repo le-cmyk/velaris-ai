@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, ClipboardCheck, LayoutDashboard, ScrollText, Settings } from 'lucide-react';
+import { Bot, ClipboardCheck, Database, LayoutDashboard, ScrollText, Settings } from 'lucide-react';
 
 import { getUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/chat', label: 'Chat', icon: Bot },
+  { href: '/dashboard/data', label: 'Data', icon: Database },
   { href: '/dashboard/approvals', label: 'Approvals', icon: ClipboardCheck },
   { href: '/dashboard/audit-logs', label: 'Audit Logs', icon: ScrollText },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },

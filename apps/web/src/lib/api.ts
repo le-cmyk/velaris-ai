@@ -2,6 +2,8 @@ import type {
   ApprovalRequest,
   AuditLogEntry,
   ChatResponse,
+  ClientDataRecord,
+  ClientDataListResponse,
   ToolInfo,
   User,
   WorkspaceInfo,
@@ -88,6 +90,31 @@ export const api = {
     return { token, user: data.user };
   },
 
+  signup: async (
+    email: string,
+    password: string,
+    fullName?: string,
+    workspaceName?: string,
+  ): Promise<{ token: string; user: User }> => {
+    const response = await fetchWithAuth('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        password,
+        full_name: fullName ?? '',
+        workspace_name: workspaceName ?? '',
+      }),
+    });
+    const data = await parseResponse<LoginResponse>(response);
+    const token = data.access_token ?? data.token;
+
+    if (!token) {
+      throw new Error('Signup response did not include a token');
+    }
+
+    return { token, user: data.user };
+  },
+
   sendMessage: async (message: string, workspace_id: string): Promise<ChatResponse> => {
     const response = await fetchWithAuth('/chat', {
       method: 'POST',
@@ -131,5 +158,49 @@ export const api = {
   getWorkspace: async (): Promise<WorkspaceInfo> => {
     const response = await fetchWithAuth('/workspace');
     return parseResponse<WorkspaceInfo>(response);
+  },
+
+  getClientData: async (params?: {
+    type?: string;
+    search?: string;
+    skip?: number;
+    limit?: number;
+  }): Promise<ClientDataListResponse> => {
+    const query = new URLSearchParams();
+    if (params?.type) query.set('type', params.type);
+    if (params?.search) query.set('search', params.search);
+    if (params?.skip != null) query.set('skip', String(params.skip));
+    if (params?.limit != null) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    const response = await fetchWithAuth(`/client-data${qs ? `?${qs}` : ''}`);
+    return parseResponse<ClientDataListResponse>(response);
+  },
+
+  createClientData: async (payload: {
+    type: string;
+    title: string;
+    content?: string;
+    metadata_?: Record<string, unknown>;
+  }): Promise<ClientDataRecord> => {
+    const response = await fetchWithAuth('/client-data', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return parseResponse<ClientDataRecord>(response);
+  },
+
+  updateClientData: async (
+    id: string,
+    payload: { type?: string; title?: string; content?: string },
+  ): Promise<ClientDataRecord> => {
+    const response = await fetchWithAuth(`/client-data/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return parseResponse<ClientDataRecord>(response);
+  },
+
+  deleteClientData: async (id: string): Promise<void> => {
+    await fetchWithAuth(`/client-data/${id}?confirmed=true`, { method: 'DELETE' });
   },
 };

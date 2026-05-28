@@ -3,7 +3,7 @@
 import pytest
 
 from app.agent.intents import Intent
-from app.agent.runtime import classify_intent, build_execution_plan, generate_mock_query
+from app.agent.runtime import classify_intent, build_execution_plan
 
 
 class TestIntentClassification:
@@ -56,9 +56,9 @@ class TestIntentClassification:
 class TestExecutionPlan:
     """Tests for build_execution_plan()."""
 
-    def test_database_read_plan_has_tool_step(self) -> None:
+    def test_database_read_plan_has_llm_step(self) -> None:
         plan = build_execution_plan(Intent.DATABASE_READ)
-        assert "Prepare postgres_query tool call" in plan["steps"]
+        assert "Call OpenRouter LLM with context" in plan["steps"]
         assert plan["intent"] == "database_read"
         assert plan["requires_approval"] is False
 
@@ -66,36 +66,20 @@ class TestExecutionPlan:
         plan = build_execution_plan(Intent.DATABASE_WRITE_REQUEST)
         assert plan["requires_approval"] is True
 
-    def test_unknown_intent_plan_no_tool_step(self) -> None:
+    def test_unknown_intent_plan_has_llm_step(self) -> None:
         plan = build_execution_plan(Intent.UNKNOWN)
-        assert "Respond without tool execution" in plan["steps"]
+        assert "Call OpenRouter LLM" in plan["steps"]
         assert plan["requires_approval"] is False
 
-    def test_summarize_plan_has_tool_step(self) -> None:
+    def test_summarize_plan_has_llm_step(self) -> None:
         plan = build_execution_plan(Intent.SUMMARIZE_DATA)
-        assert "Prepare postgres_query tool call" in plan["steps"]
+        assert "Call OpenRouter LLM with context" in plan["steps"]
 
+    def test_plan_has_intent_field(self) -> None:
+        plan = build_execution_plan(Intent.SUMMARIZE_DATA)
+        assert plan["intent"] == Intent.SUMMARIZE_DATA.value
 
-class TestMockQueryGeneration:
-    """Tests for generate_mock_query()."""
-
-    def test_customer_read_returns_users_query(self) -> None:
-        query = generate_mock_query("show me all customers", Intent.DATABASE_READ)
-        assert query is not None
-        assert query.upper().startswith("SELECT")
-
-    def test_order_read_returns_orders_query(self) -> None:
-        query = generate_mock_query("list all orders", Intent.DATABASE_READ)
-        assert query is not None
-        assert "order" in query.lower()
-
-    def test_write_request_returns_write_query(self) -> None:
-        query = generate_mock_query("update user name", Intent.DATABASE_WRITE_REQUEST)
-        assert query is not None
-        # Write queries contain risky keywords
-        risky = ["UPDATE", "INSERT", "DELETE"]
-        assert any(kw in query.upper() for kw in risky)
-
-    def test_unknown_intent_returns_none(self) -> None:
-        query = generate_mock_query("hello", Intent.UNKNOWN)
-        assert query is None
+    def test_plan_has_steps_list(self) -> None:
+        plan = build_execution_plan(Intent.DATABASE_READ)
+        assert isinstance(plan["steps"], list)
+        assert len(plan["steps"]) > 0

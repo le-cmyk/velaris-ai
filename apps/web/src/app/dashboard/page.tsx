@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Bot, ClipboardCheck, Loader2, PlayCircle, Wrench } from 'lucide-react';
+import { ArrowRight, Bot, ClipboardCheck, Database, Loader2, PlayCircle, Wrench } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,6 +100,12 @@ export default function DashboardHomePage() {
                 description: 'Start a new multi-step run with connected tools and execution planning.',
                 href: '/dashboard/chat',
                 icon: Bot,
+              },
+              {
+                title: 'Client data',
+                description: 'Browse, search, and manage your workspace records — customers, invoices, tickets, and more.',
+                href: '/dashboard/data',
+                icon: Database,
               },
               {
                 title: 'Approval queue',

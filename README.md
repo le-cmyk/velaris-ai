@@ -25,7 +25,13 @@ cd velaris-ai
 cp .env.example .env
 ```
 
-Edit `.env` to set a strong `SECRET_KEY` for production. The defaults work for local development.
+Edit `.env` to set your secrets:
+
+| Variable | Description |
+|----------|-------------|
+| `JWT_SECRET` | Strong random secret for JWT signing |
+| `OPENROUTER_API_KEY` | Your OpenRouter API key (server-side only) |
+| `OPENROUTER_MODEL` | OpenRouter model ID (default: `deepseek/deepseek-r1-0528`) |
 
 ### 3. Start the platform
 
@@ -42,32 +48,26 @@ This starts:
 | PostgreSQL | localhost:5432 |
 | Redis | localhost:6379 |
 
-### 4. Log in
+### 4. Log in or sign up
 
-Open http://localhost:3000 and log in with the demo account:
+Open http://localhost:3000 to sign up with a new account, or log in with the demo account:
 
 | Field | Value |
 |-------|-------|
 | Email | `demo@velaris.ai` |
 | Password | `demo123` |
 
+**New users automatically receive a private workspace with seeded sample data** — customers, invoices, support tickets, tasks, contracts, company notes, and product usage records.
+
 ### 5. Try it out
 
-In the **Chat** interface, send a message like:
+Visit `/dashboard/data` to browse your seeded records. Then open the **Chat** interface and ask:
 
-> Show me the list of customers in the database.
+> List all my customers.
 
-You will see:
-- The assistant response
-- The classified intent (`database_read`)
-- The execution plan steps
-- The tool call (`postgres_query`) and its result
+> Summarize the support tickets.
 
-Try a write request to trigger the approval workflow:
-
-> Delete all inactive users.
-
-This creates a pending approval in the **Approvals** panel that you can approve or reject.
+> Create a new task: "Follow up with Acme on renewal"
 
 ---
 
@@ -78,7 +78,9 @@ Next.js Frontend (port 3000)
         ↓
 FastAPI Backend API (port 8000)
         ↓
-Agent Runtime  (intent classification → execution plan)
+Agent Runtime  (intent classification → OpenRouter LLM → action parsing)
+        ↓
+Client Data Layer (workspace-isolated records: customers, invoices, etc.)
         ↓
 Tool Gateway   (security checks, approval enforcement, audit logging)
         ↓
@@ -91,14 +93,14 @@ PostgreSQL / Redis
 
 | Path | Purpose |
 |------|---------|
-| `apps/web/` | Next.js 14 frontend — dashboard, chat, approvals, audit logs |
+| `apps/web/` | Next.js 14 frontend — dashboard, chat, data, approvals, audit logs |
 | `apps/api/` | FastAPI backend — all REST endpoints, JWT auth, migrations |
-| `apps/api/app/agent/` | Agent runtime — intent classification, execution planning |
+| `apps/api/app/agent/` | Agent runtime — OpenRouter LLM, action execution, intent classification |
+| `apps/api/app/llm/` | OpenRouter HTTP client |
 | `apps/api/app/gateway/` | Tool Gateway — SQL safety checker, approval enforcement |
 | `apps/api/app/mcp/` | MCP-ready tool abstraction + mock `postgres_query` tool |
+| `apps/api/app/seeds/` | Fake client data seeder (runs on every new signup) |
 | `deployments/docker-compose/` | Docker Compose with init SQL |
-| `packages/shared-types/` | Shared TypeScript types |
-| `packages/prompts/` | System prompts for agents |
 | `docs/` | Architecture and API reference |
 
 ---
@@ -109,9 +111,15 @@ PostgreSQL / Redis
 |--------|----------|-------------|
 | GET | `/health` | Health check |
 | POST | `/auth/login` | Login, returns JWT |
+| POST | `/auth/signup` | Sign up, creates workspace + seeds data, returns JWT |
 | GET | `/workspace` | Workspace info |
-| POST | `/chat` | Send message to agent |
+| POST | `/chat` | Send message to agent (OpenRouter LLM) |
 | GET | `/runs/{run_id}` | Get agent run details |
+| GET | `/client-data` | List workspace records (filter by type/search) |
+| GET | `/client-data/{id}` | Get a single record |
+| POST | `/client-data` | Create a record |
+| PATCH | `/client-data/{id}` | Update a record |
+| DELETE | `/client-data/{id}?confirmed=true` | Delete a record (requires `confirmed=true`) |
 | GET | `/approvals` | List pending approvals |
 | POST | `/approvals/{id}/approve` | Approve a pending action |
 | POST | `/approvals/{id}/reject` | Reject a pending action |
@@ -122,15 +130,72 @@ Full Swagger UI available at http://localhost:8000/docs when running.
 
 ---
 
+## OpenRouter LLM setup
+
+The chat agent uses [OpenRouter](https://openrouter.ai) as the LLM provider.
+
+1. Create an account at https://openrouter.ai and get an API key.
+2. Add to your `.env` (backend only):
+
+```env
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_MODEL=deepseek/deepseek-r1-0528
+```
+
+> **Important:** `OPENROUTER_API_KEY` is a **backend-only** variable. Never add it to `NEXT_PUBLIC_*` or the Vercel frontend. Only `NEXT_PUBLIC_API_URL` goes to Vercel.
+
+To change the model, update `OPENROUTER_MODEL`. The model ID must be a valid [OpenRouter model slug](https://openrouter.ai/models).
+
+---
+
+## Signup flow
+
+1. User visits `/signup` and fills in email, password, and optional name/workspace fields.
+2. Backend creates a new `Workspace` with a unique slug.
+3. Backend creates a `User` linked to that workspace.
+4. Backend seeds ~16 fake client records across 7 categories.
+5. A JWT is returned in the same format as login.
+6. User is redirected to `/dashboard`.
+7. All future data operations are isolated to this workspace.
+
+---
+
 ## Security
 
 - **JWT authentication** — HS256 tokens, configurable expiry
 - **Bcrypt password hashing** — all passwords hashed with passlib
+- **Workspace isolation** — all tables include `workspace_id`; users can only access their own workspace
 - **Read-only by default** — only `SELECT` queries execute without approval
 - **Approval workflow** — `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE` require explicit human approval
-- **Audit logs** — every login, tool call, and approval decision is logged
-- **Workspace isolation** — all database tables include `workspace_id` for tenant separation
+- **Delete confirmation** — `/client-data/{id}` requires `confirmed=true` query param
+- **Audit logs** — every login, signup, tool call, record create/update/delete, and approval decision is logged
 - **No hardcoded secrets** — all credentials from `.env`
+- **LLM key server-side only** — `OPENROUTER_API_KEY` never exposed to the frontend
+
+---
+
+## Environment variables
+
+### Backend (Railway)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `REDIS_URL` | ✅ | Redis connection string |
+| `JWT_SECRET` | ✅ | Secret key for JWT signing |
+| `OPENROUTER_API_KEY` | ✅ | OpenRouter API key |
+| `OPENROUTER_MODEL` | | OpenRouter model (default: `deepseek/deepseek-r1-0528`) |
+| `CORS_ORIGINS` | ✅ | Comma-separated list of allowed frontend origins |
+| `ENVIRONMENT` | | `development` or `production` |
+| `CLIENT_CONFIG_PATH` | | Path to client YAML config |
+
+### Frontend (Vercel)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | ✅ | Backend API URL (e.g., `https://your-api.railway.app`) |
+
+> No other env vars should be set on Vercel. The LLM key stays on the backend.
 
 ---
 
@@ -143,25 +208,10 @@ client:
   name: my-company
   environment: production
 
-security:
-  readonly_by_default: true
-  require_approval_for:
-    - database_write
-    - send_email
-
 tools:
   postgres_query:
     enabled: true
-    readonly: true
-
-agents:
-  - name: data_analyst
-    enabled: true
-    tools:
-      - postgres_query
 ```
-
-The backend loads this file at startup and merges it with safe defaults.
 
 ---
 
@@ -177,7 +227,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 
 # Run tests
-pytest
+python -m pytest tests/ -v
 ```
 
 ### Frontend (Next.js)
@@ -189,31 +239,7 @@ npm install
 # Run dev server
 npm run dev
 
-# Run tests
-npm test
-
 # Build
-npm run build
-```
-
-### GitHub Codespaces quick setup
-
-```bash
-# Install backend dependencies
-cd apps/api
-pip install -r requirements.txt
-
-# Run backend tests
-pytest
-
-# Install frontend dependencies
-cd ../web
-npm install
-
-# Run frontend tests
-npm test
-
-# Run frontend build
 npm run build
 ```
 
@@ -222,14 +248,6 @@ npm run build
 ```bash
 cd apps/api
 alembic upgrade head
-```
-
-### Database init and demo seed (Railway/Codespaces)
-
-```bash
-cd apps/api
-python scripts/init_db.py --force
-python scripts/seed_demo_user.py --force
 ```
 
 ---
@@ -250,43 +268,23 @@ velaris-ai/
 │   ├── web/                  # Next.js frontend
 │   └── api/                  # FastAPI backend
 │       ├── app/
-│       │   ├── agent/        # Agent runtime
+│       │   ├── agent/        # Agent runtime (OpenRouter, action execution)
 │       │   ├── gateway/      # Tool Gateway
+│       │   ├── llm/          # OpenRouter HTTP client
 │       │   ├── mcp/          # MCP tool layer
 │       │   ├── models/       # SQLAlchemy ORM models
 │       │   ├── routers/      # FastAPI route handlers
-│       │   └── schemas/      # Pydantic request/response schemas
+│       │   ├── schemas/      # Pydantic request/response schemas
+│       │   └── seeds/        # Fake client data seeder
 │       ├── alembic/          # Database migrations
 │       └── tests/            # Unit tests
-├── services/
-│   ├── agent-runtime/        # (future) standalone agent service
-│   ├── tool-gateway/         # (future) standalone gateway service
-│   ├── mcp-servers/          # (future) real MCP server implementations
-│   └── workers/              # (future) background workers
-├── packages/
-│   ├── shared-types/         # Shared TypeScript types
-│   ├── prompts/              # Agent system prompts
-│   └── evals/                # (future) evaluation harnesses
 ├── deployments/
-│   └── docker-compose/       # Docker Compose + init SQL
-├── docs/                     # Architecture and API reference
+│   └── docker-compose/
+├── docs/
 ├── client-config.example.yaml
 ├── .env.example
-└── docker-compose.yml        # Root-level convenience file
+└── docker-compose.yml
 ```
-
----
-
-## Roadmap
-
-- [ ] Real LLM integration (OpenAI / Anthropic)
-- [ ] Real MCP SDK client/server connections
-- [ ] pgvector embeddings for memory search
-- [ ] Multi-agent collaboration
-- [ ] Visual workflow builder
-- [ ] Kubernetes / Helm deployment
-- [ ] RBAC and SSO (Keycloak)
-- [ ] OpenTelemetry observability
 
 ---
 
@@ -296,4 +294,5 @@ velaris-ai/
 |-------|----------|------|
 | `demo@velaris.ai` | `demo123` | Admin |
 
-> **Note:** Change the demo password and `SECRET_KEY` before any non-local deployment.
+> **Note:** Change the demo password and `JWT_SECRET` before any non-local deployment.
+

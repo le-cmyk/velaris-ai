@@ -37,6 +37,14 @@ class Settings(BaseSettings):
         default="client-config.yaml",
         validation_alias=AliasChoices("CLIENT_CONFIG_PATH", "client_config_path"),
     )
+    openrouter_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("OPENROUTER_API_KEY", "openrouter_api_key"),
+    )
+    openrouter_model: str = Field(
+        default="deepseek/deepseek-r1-0528",
+        validation_alias=AliasChoices("OPENROUTER_MODEL", "openrouter_model"),
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

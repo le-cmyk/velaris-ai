@@ -1,11 +1,18 @@
 import uuid
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str = ""
+    workspace_name: str = ""
 
 
 class TokenResponse(BaseModel):

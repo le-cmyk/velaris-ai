@@ -17,7 +17,11 @@ JWT_SECRET=
 ENVIRONMENT=production
 CORS_ORIGINS=
 CLIENT_CONFIG_PATH=
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=deepseek/deepseek-r1-0528
 ```
+
+> **Important:** `OPENROUTER_API_KEY` must only be set here on Railway (backend). Never add it to Vercel.
 
 ## Deploy backend from GitHub
 
@@ -37,6 +41,8 @@ JWT_SECRET=change-this-to-a-long-random-secret
 ENVIRONMENT=production
 CORS_ORIGINS=https://YOUR-VERCEL-DOMAIN.vercel.app
 CLIENT_CONFIG_PATH=client-config.example.yaml
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_MODEL=deepseek/deepseek-r1-0528
 ```
 
 11. Deploy backend.
@@ -62,3 +68,4 @@ If you do not pass `--force`, scripts stop when target records already exist.
 
 - Keep `CORS_ORIGINS` set to your Vercel frontend domain.
 - Do not commit real secrets; use Railway environment variables.
+- New user sign-ups automatically create a workspace and seed fake data — no manual seeding needed.

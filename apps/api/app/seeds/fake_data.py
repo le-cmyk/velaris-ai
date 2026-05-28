@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -163,7 +163,7 @@ _FAKE_RECORDS: list[dict] = [
 
 async def seed_fake_client_data(workspace_id: uuid.UUID, db: AsyncSession) -> None:
     """Create sample client data records for a newly created workspace."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for i, record in enumerate(_FAKE_RECORDS):
         created_at = now - timedelta(days=len(_FAKE_RECORDS) - i)
         db.add(

@@ -44,7 +44,7 @@ export default function DataPage() {
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
-  const [createType, setCreateType] = useState('note');
+  const [createType, setCreateType] = useState('customer');
   const [createTitle, setCreateTitle] = useState('');
   const [createContent, setCreateContent] = useState('');
   const [creating, setCreating] = useState(false);
@@ -149,7 +149,7 @@ export default function DataPage() {
                     onChange={(e) => setCreateType(e.target.value)}
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                   >
-                    {[...RECORD_TYPES, 'note'].map((t) => (
+                    {RECORD_TYPES.map((t) => (
                       <option key={t} value={t}>
                         {t.replace('_', ' ')}
                       </option>

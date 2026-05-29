@@ -8,12 +8,15 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import settings
 from app.core.security import hash_password
+from app.database_debug import normalize_database_url, print_database_debug
 from app.models.user import User
 from app.models.workspace import Workspace
 
 
 async def seed_demo_user(force: bool) -> None:
-    engine = create_async_engine(settings.database_url, future=True)
+    database_url = normalize_database_url(settings.database_url)
+    print_database_debug("scripts.seed_demo_user.create_async_engine", database_url, settings.database_url)
+    engine = create_async_engine(database_url, future=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     try:

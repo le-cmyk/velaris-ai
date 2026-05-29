@@ -8,10 +8,13 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import settings
 from app.database import Base
+from app.database_debug import normalize_database_url, print_database_debug
 
 
 async def initialize_database(force: bool) -> None:
-    engine = create_async_engine(settings.database_url, future=True)
+    database_url = normalize_database_url(settings.database_url)
+    print_database_debug("scripts.init_db.create_async_engine", database_url, settings.database_url)
+    engine = create_async_engine(database_url, future=True)
     try:
         async with engine.begin() as connection:
             result = await connection.execute(

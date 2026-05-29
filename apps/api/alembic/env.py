@@ -11,7 +11,14 @@ from app.database import Base
 from app.models import agent_run, approval, audit_log, memory, tool_call, user, workspace  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+
+_db_url = settings.database_url
+if _db_url and not _db_url.startswith("postgresql+asyncpg://"):
+    for _prefix in ("postgresql://", "postgres://"):
+        if _db_url.startswith(_prefix):
+            _db_url = _db_url.replace(_prefix, "postgresql+asyncpg://", 1)
+            break
+config.set_main_option("sqlalchemy.url", _db_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -21,7 +28,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=settings.database_url,
+        url=_db_url,
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,

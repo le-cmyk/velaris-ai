@@ -23,7 +23,12 @@ config = context.config
 _ini_url_before_override = config.get_main_option("sqlalchemy.url", "")
 _db_url = normalize_database_url(settings.database_url or "")
 print("Alembic ini sqlalchemy.url before override (redacted):", redact_database_url(_ini_url_before_override))
-print_database_debug("alembic.env.set_sqlalchemy_url", _db_url, settings.database_url)
+print_database_debug(
+    "alembic.env.set_sqlalchemy_url",
+    _db_url,
+    settings.database_url,
+    settings.model_config.get("env_file", ".env"),
+)
 config.set_main_option("sqlalchemy.url", _db_url)
 print("Alembic sqlalchemy.url after override (redacted):", redact_database_url(config.get_main_option("sqlalchemy.url", "")))
 
@@ -53,7 +58,12 @@ def do_run_migrations(connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    print_database_debug("alembic.env.run_migrations_online", _db_url, settings.database_url)
+    print_database_debug(
+        "alembic.env.run_migrations_online",
+        _db_url,
+        settings.database_url,
+        settings.model_config.get("env_file", ".env"),
+    )
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

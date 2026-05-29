@@ -13,7 +13,12 @@ from app.database_debug import normalize_database_url, print_database_debug
 
 async def initialize_database(force: bool) -> None:
     database_url = normalize_database_url(settings.database_url)
-    print_database_debug("scripts.init_db.create_async_engine", database_url, settings.database_url)
+    print_database_debug(
+        "scripts.init_db.create_async_engine",
+        database_url,
+        settings.database_url,
+        settings.model_config.get("env_file", ".env"),
+    )
     engine = create_async_engine(database_url, future=True)
     try:
         async with engine.begin() as connection:

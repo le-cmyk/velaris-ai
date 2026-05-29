@@ -12,7 +12,12 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 
 database_url = normalize_database_url(settings.database_url)
-print_database_debug("app.database.create_async_engine", database_url, settings.database_url)
+print_database_debug(
+    "app.database.create_async_engine",
+    database_url,
+    settings.database_url,
+    settings.model_config.get("env_file", ".env"),
+)
 
 engine = create_async_engine(database_url, future=True, pool_pre_ping=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)

@@ -15,7 +15,12 @@ from app.models.workspace import Workspace
 
 async def seed_demo_user(force: bool) -> None:
     database_url = normalize_database_url(settings.database_url)
-    print_database_debug("scripts.seed_demo_user.create_async_engine", database_url, settings.database_url)
+    print_database_debug(
+        "scripts.seed_demo_user.create_async_engine",
+        database_url,
+        settings.database_url,
+        settings.model_config.get("env_file", ".env"),
+    )
     engine = create_async_engine(database_url, future=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 

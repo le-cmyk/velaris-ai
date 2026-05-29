@@ -15,16 +15,22 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.config import settings
 from app.database import Base
+from app.database_debug import normalize_database_url, print_database_debug, redact_database_url
 from app.models import agent_run, approval, audit_log, memory, tool_call, user, workspace  # noqa: F401
 
 config = context.config
 
-_db_url = settings.database_url or ""
-for _prefix in ("postgresql://", "postgres://"):
-    if _db_url.startswith(_prefix):
-        _db_url = _db_url.replace(_prefix, "postgresql+asyncpg://", 1)
-        break
+_ini_url_before_override = config.get_main_option("sqlalchemy.url", "")
+_db_url = normalize_database_url(settings.database_url or "")
+print("Alembic ini sqlalchemy.url before override (redacted):", redact_database_url(_ini_url_before_override))
+print_database_debug(
+    "alembic.env.set_sqlalchemy_url",
+    _db_url,
+    settings.database_url,
+    settings.model_config.get("env_file", ".env"),
+)
 config.set_main_option("sqlalchemy.url", _db_url)
+print("Alembic sqlalchemy.url after override (redacted):", redact_database_url(config.get_main_option("sqlalchemy.url", "")))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -52,6 +58,12 @@ def do_run_migrations(connection) -> None:
 
 
 async def run_migrations_online() -> None:
+    print_database_debug(
+        "alembic.env.run_migrations_online",
+        _db_url,
+        settings.database_url,
+        settings.model_config.get("env_file", ".env"),
+    )
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

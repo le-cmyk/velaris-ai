@@ -63,4 +63,72 @@ describe('api client configuration', () => {
       'Unable to reach API at https://api.example.com/tools. Check NEXT_PUBLIC_API_URL in Vercel and open /debug-api for more details.',
     );
   });
+
+  it('maps login response fields into frontend token and user', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      text: async () =>
+        JSON.stringify({
+          access_token: 'test-token',
+          token_type: 'bearer',
+          user_id: 'user-1',
+          workspace_id: 'workspace-1',
+          email: 'demo@velaris.ai',
+        }),
+    } as Response) as unknown as typeof fetch;
+
+    const { api } = await import('@/lib/api');
+    const result = await api.login('demo@velaris.ai', 'demo123');
+
+    expect(result).toEqual({
+      token: 'test-token',
+      user: {
+        id: 'user-1',
+        email: 'demo@velaris.ai',
+        workspace_id: 'workspace-1',
+        full_name: 'demo',
+      },
+    });
+  });
+
+  it('throws a clear parsing error when login response misses required user fields', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      text: async () =>
+        JSON.stringify({
+          access_token: 'test-token',
+          workspace_id: 'workspace-1',
+        }),
+    } as Response) as unknown as typeof fetch;
+
+    const { api } = await import('@/lib/api');
+
+    await expect(api.login('demo@velaris.ai', 'demo123')).rejects.toThrow(
+      'Login response is missing required user fields',
+    );
+  });
+
+  it('throws when login response does not include an access token', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      text: async () =>
+        JSON.stringify({
+          user_id: 'user-1',
+          workspace_id: 'workspace-1',
+          email: 'demo@velaris.ai',
+        }),
+    } as Response) as unknown as typeof fetch;
+
+    const { api } = await import('@/lib/api');
+
+    await expect(api.login('demo@velaris.ai', 'demo123')).rejects.toThrow(
+      'Login response did not include an access token',
+    );
+  });
 });

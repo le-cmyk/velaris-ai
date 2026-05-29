@@ -17,9 +17,12 @@ const BODY_PREVIEW_LENGTH = 500;
 let apiConfigLogged = false;
 
 interface LoginResponse {
-  token?: string;
   access_token?: string;
-  user: User;
+  token?: string;
+  token_type?: string;
+  user_id: string;
+  workspace_id: string;
+  email: string;
 }
 
 interface ApprovalActionResponse {
@@ -135,7 +138,7 @@ function parseResponseBody(text: string): unknown {
 }
 
 function getBodyPreview(text: string): string {
-  return text ? text.slice(0, BODY_PREVIEW_LENGTH) : '(empty)';
+  return text ? sanitizeBodyPreview(text).slice(0, BODY_PREVIEW_LENGTH) : '(empty)';
 }
 
 function getResponseDetail(data: unknown): string | null {
@@ -165,6 +168,64 @@ function buildFailedRequestMessage(requestUrl: string, status: number, statusTex
 
 function buildNetworkErrorMessage(requestUrl: string): string {
   return `Unable to reach API at ${requestUrl}. Check NEXT_PUBLIC_API_URL in Vercel and open /debug-api for more details.`;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function sanitizeForLogs(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeForLogs(entry));
+  }
+
+  if (!isObject(value)) {
+    return value;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  const sensitiveKeys = new Set(['password', 'token', 'access_token', 'authorization', 'cookie']);
+
+  for (const [key, keyValue] of Object.entries(value)) {
+    sanitized[key] = sensitiveKeys.has(key.toLowerCase()) ? '[REDACTED]' : sanitizeForLogs(keyValue);
+  }
+
+  return sanitized;
+}
+
+function sanitizeBodyPreview(text: string): string {
+  const parsed = parseResponseBody(text);
+
+  if (typeof parsed === 'string') {
+    return parsed
+      .replace(/("?(?:access_token|token|password|authorization|cookie)"?\s*:\s*)"[^"]*"/gi, '$1"[REDACTED]"')
+      .replace(/\b(?:Bearer)\s+[A-Za-z0-9\-._~+/]+=*/gi, '******');
+  }
+
+  return JSON.stringify(sanitizeForLogs(parsed));
+}
+
+function parseAuthUser(responseData: LoginResponse): User {
+  if (!responseData.user_id || !responseData.workspace_id || !responseData.email) {
+    throw new Error('Login response is missing required user fields');
+  }
+
+  return {
+    id: responseData.user_id,
+    email: responseData.email,
+    workspace_id: responseData.workspace_id,
+    full_name: responseData.email.split('@')[0],
+  };
+}
+
+function parseAuthToken(responseData: LoginResponse): string {
+  const token = responseData.access_token ?? responseData.token;
+
+  if (!token) {
+    throw new Error('Login response did not include an access token');
+  }
+
+  return token;
 }
 
 function logApiError(error: Error, requestUrl: string | undefined, missingApiUrl: boolean): void {
@@ -250,13 +311,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    const token = response.data.access_token ?? response.data.token;
-
-    if (!token) {
-      throw new Error('Login response did not include a token');
-    }
-
-    return { token, user: response.data.user };
+    return { token: parseAuthToken(response.data), user: parseAuthUser(response.data) };
   },
 
   signup: async (
@@ -274,13 +329,7 @@ export const api = {
         workspace_name: workspaceName ?? '',
       }),
     });
-    const token = response.data.access_token ?? response.data.token;
-
-    if (!token) {
-      throw new Error('Signup response did not include a token');
-    }
-
-    return { token, user: response.data.user };
+    return { token: parseAuthToken(response.data), user: parseAuthUser(response.data) };
   },
 
   sendMessage: async (message: string, workspace_id: string): Promise<ChatResponse> => {

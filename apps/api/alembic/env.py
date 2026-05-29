@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
+
+CURRENT_DIR = Path(__file__).resolve().parent
+BACKEND_ROOT = CURRENT_DIR.parent
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.config import settings
 from app.database import Base
@@ -12,12 +19,11 @@ from app.models import agent_run, approval, audit_log, memory, tool_call, user, 
 
 config = context.config
 
-_db_url = settings.database_url
-if _db_url and not _db_url.startswith("postgresql+asyncpg://"):
-    for _prefix in ("postgresql://", "postgres://"):
-        if _db_url.startswith(_prefix):
-            _db_url = _db_url.replace(_prefix, "postgresql+asyncpg://", 1)
-            break
+_db_url = settings.database_url or ""
+for _prefix in ("postgresql://", "postgres://"):
+    if _db_url.startswith(_prefix):
+        _db_url = _db_url.replace(_prefix, "postgresql+asyncpg://", 1)
+        break
 config.set_main_option("sqlalchemy.url", _db_url)
 
 if config.config_file_name is not None:

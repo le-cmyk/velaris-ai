@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, LockKeyhole, Mail } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { ApiDebugPanel } from '@/components/debug/ApiDebugPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -78,46 +79,58 @@ export default function LoginPage() {
       </section>
 
       <section className="flex flex-1 items-center justify-center p-6 sm:p-10">
-        <Card className="w-full max-w-md border-slate-200 shadow-xl shadow-slate-200/60">
-          <CardHeader className="space-y-2 text-center">
-            <div className="mx-auto rounded-full bg-blue-100 p-3 text-blue-600">
-              <LockKeyhole className="h-6 w-6" />
-            </div>
-            <CardTitle className="text-3xl">Welcome back</CardTitle>
-            <CardDescription>Use the demo workspace credentials to access the Velaris control plane.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="pl-9" />
+        <div className="w-full max-w-md space-y-4">
+          <Card className="border-slate-200 shadow-xl shadow-slate-200/60">
+            <CardHeader className="space-y-2 text-center">
+              <div className="mx-auto rounded-full bg-blue-100 p-3 text-blue-600">
+                <LockKeyhole className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-3xl">Welcome back</CardTitle>
+              <CardDescription>Use the demo workspace credentials to access the Velaris control plane.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="pl-9" />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </div>
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Sign in to workspace
-              </Button>
-              <p className="text-center text-sm text-slate-500">
-                Don&apos;t have an account?{' '}
-                <Link href="/signup" className="font-medium text-blue-600 hover:underline">
-                  Create one
-                </Link>
-              </p>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </div>
+                {error ? <p className="text-sm text-red-600">{error}</p> : null}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Sign in to workspace
+                </Button>
+                <div className="space-y-2 text-center text-sm text-slate-500">
+                  <p>
+                    Don&apos;t have an account?{' '}
+                    <Link href="/signup" className="font-medium text-blue-600 hover:underline">
+                      Create one
+                    </Link>
+                  </p>
+                  <p>
+                    API connectivity issue?{' '}
+                    <Link href="/debug-api" className="font-medium text-blue-600 hover:underline">
+                      Open /debug-api
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <ApiDebugPanel compact />
+        </div>
       </section>
     </main>
   );

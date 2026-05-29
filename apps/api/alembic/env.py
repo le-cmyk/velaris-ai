@@ -19,7 +19,7 @@ from app.models import agent_run, approval, audit_log, memory, tool_call, user, 
 
 config = context.config
 
-_db_url = settings.database_url
+_db_url = settings.database_url or ""
 for _prefix in ("postgresql://", "postgres://"):
     if _db_url.startswith(_prefix):
         _db_url = _db_url.replace(_prefix, "postgresql+asyncpg://", 1)

@@ -196,7 +196,7 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
   };
 
   if (token) {
-    headers.Authorization = `******;
+    headers.Authorization = 'Bearer ' + token;
   }
 
   console.log('[API DEBUG] Request:', requestUrl);

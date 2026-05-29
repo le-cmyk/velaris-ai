@@ -54,10 +54,11 @@ jest.mock('@/lib/api', () => ({
 }));
 
 describe('frontend page rendering', () => {
-  it('Login page renders', () => {
+  it('Login page renders', async () => {
     render(<LoginPage />);
     expect(screen.getByText('Welcome back')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in to workspace/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Configured API URL/i)).toBeInTheDocument());
   });
 
   it('Dashboard renders', async () => {

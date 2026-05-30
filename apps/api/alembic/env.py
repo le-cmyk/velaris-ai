@@ -16,7 +16,7 @@ if str(BACKEND_ROOT) not in sys.path:
 from app.config import settings
 from app.database import Base
 from app.database_debug import normalize_database_url, print_database_debug, redact_database_url
-from app.models import agent_run, approval, audit_log, memory, tool_call, user, workspace  # noqa: F401
+from app.models import agent_run, approval, audit_log, client_endpoint, memory, tool_call, user, workspace  # noqa: F401
 
 config = context.config
 

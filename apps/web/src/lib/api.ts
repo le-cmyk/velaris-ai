@@ -1,9 +1,26 @@
 import type {
+  AgentTemplate,
+  ApiKey,
+  AppNotification,
   ApprovalRequest,
   AuditLogEntry,
   ChatResponse,
   ClientDataRecord,
   ClientDataListResponse,
+  Contact,
+  Conversation,
+  CrmStats,
+  Customer,
+  Dashboard,
+  DashboardWidget,
+  DashboardWithWidgets,
+  Deal,
+  Invoice,
+  ListResponse,
+  Message,
+  Product,
+  ScheduledJob,
+  SupportTicket,
   ToolInfo,
   User,
   WorkspaceInfo,
@@ -458,5 +475,319 @@ export const api = {
 
   deleteClientData: async (id: string): Promise<void> => {
     await requestJson<unknown>(`/client-data/${id}?confirmed=true`, { method: 'DELETE' });
+  },
+
+  // Conversations
+  conversations: {
+    list: async (): Promise<ListResponse<Conversation>> => {
+      const response = await requestJson<ListResponse<Conversation>>('/conversations');
+      return response.data;
+    },
+    create: async (data: { title?: string; agent_template_id?: string }): Promise<Conversation> => {
+      const response = await requestJson<Conversation>('/conversations', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    get: async (id: string): Promise<Conversation> => {
+      const response = await requestJson<Conversation>(`/conversations/${id}`);
+      return response.data;
+    },
+    delete: async (id: string): Promise<void> => {
+      await requestJson<unknown>(`/conversations/${id}`, { method: 'DELETE' });
+    },
+    getMessages: async (id: string): Promise<ListResponse<Message>> => {
+      const response = await requestJson<ListResponse<Message>>(`/conversations/${id}/messages`);
+      return response.data;
+    },
+    sendMessage: async (id: string, content: string, workspaceId: string): Promise<{ message: Message; response: Message }> => {
+      const response = await requestJson<{ message: Message; response: Message }>(`/conversations/${id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content, workspace_id: workspaceId }),
+      });
+      return response.data;
+    },
+  },
+
+  // Agent Library
+  agentLibrary: {
+    list: async (): Promise<ListResponse<AgentTemplate>> => {
+      const response = await requestJson<ListResponse<AgentTemplate>>('/agent-templates');
+      return response.data;
+    },
+    create: async (data: Partial<AgentTemplate>): Promise<AgentTemplate> => {
+      const response = await requestJson<AgentTemplate>('/agent-templates', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    update: async (id: string, data: Partial<AgentTemplate>): Promise<AgentTemplate> => {
+      const response = await requestJson<AgentTemplate>(`/agent-templates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    delete: async (id: string): Promise<void> => {
+      await requestJson<unknown>(`/agent-templates/${id}`, { method: 'DELETE' });
+    },
+  },
+
+  // Schedules
+  schedules: {
+    list: async (): Promise<ListResponse<ScheduledJob>> => {
+      const response = await requestJson<ListResponse<ScheduledJob>>('/scheduled-jobs');
+      return response.data;
+    },
+    create: async (data: Partial<ScheduledJob>): Promise<ScheduledJob> => {
+      const response = await requestJson<ScheduledJob>('/scheduled-jobs', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    update: async (id: string, data: Partial<ScheduledJob>): Promise<ScheduledJob> => {
+      const response = await requestJson<ScheduledJob>(`/scheduled-jobs/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    delete: async (id: string): Promise<void> => {
+      await requestJson<unknown>(`/scheduled-jobs/${id}`, { method: 'DELETE' });
+    },
+    trigger: async (id: string): Promise<{ run_id: string; status: string }> => {
+      const response = await requestJson<{ run_id: string; status: string }>(`/scheduled-jobs/${id}/trigger`, {
+        method: 'POST',
+      });
+      return response.data;
+    },
+    toggle: async (id: string): Promise<ScheduledJob> => {
+      const response = await requestJson<ScheduledJob>(`/scheduled-jobs/${id}/toggle`, {
+        method: 'POST',
+      });
+      return response.data;
+    },
+  },
+
+  // Dashboards
+  dashboards: {
+    list: async (): Promise<ListResponse<Dashboard>> => {
+      const response = await requestJson<ListResponse<Dashboard>>('/dashboards');
+      return response.data;
+    },
+    create: async (data: { name: string; description?: string }): Promise<Dashboard> => {
+      const response = await requestJson<Dashboard>('/dashboards', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    get: async (id: string): Promise<DashboardWithWidgets> => {
+      const response = await requestJson<DashboardWithWidgets>(`/dashboards/${id}`);
+      return response.data;
+    },
+    update: async (id: string, data: Partial<Dashboard>): Promise<Dashboard> => {
+      const response = await requestJson<Dashboard>(`/dashboards/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    addWidget: async (dashboardId: string, data: Partial<DashboardWidget>): Promise<DashboardWidget> => {
+      const response = await requestJson<DashboardWidget>(`/dashboards/${dashboardId}/widgets`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    updateWidget: async (dashboardId: string, widgetId: string, data: Partial<DashboardWidget>): Promise<DashboardWidget> => {
+      const response = await requestJson<DashboardWidget>(`/dashboards/${dashboardId}/widgets/${widgetId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    deleteWidget: async (dashboardId: string, widgetId: string): Promise<void> => {
+      await requestJson<unknown>(`/dashboards/${dashboardId}/widgets/${widgetId}`, { method: 'DELETE' });
+    },
+    getWidgetData: async (dashboardId: string, widgetId: string): Promise<{ data: unknown; widget_type: string }> => {
+      const response = await requestJson<{ data: unknown; widget_type: string }>(
+        `/dashboards/${dashboardId}/widgets/${widgetId}/data`,
+      );
+      return response.data;
+    },
+  },
+
+  // CRM
+  crm: {
+    getStats: async (): Promise<CrmStats> => {
+      const response = await requestJson<CrmStats>('/crm/stats');
+      return response.data;
+    },
+    listCustomers: async (params?: { skip?: number; limit?: number; status?: string; tier?: string; search?: string }): Promise<ListResponse<Customer>> => {
+      const query = new URLSearchParams();
+      if (params?.skip != null) query.set('skip', String(params.skip));
+      if (params?.limit != null) query.set('limit', String(params.limit));
+      if (params?.status) query.set('status', params.status);
+      if (params?.tier) query.set('tier', params.tier);
+      if (params?.search) query.set('search', params.search);
+      const qs = query.toString();
+      const response = await requestJson<ListResponse<Customer>>(`/crm/customers${qs ? `?${qs}` : ''}`);
+      return response.data;
+    },
+    createCustomer: async (data: Partial<Customer>): Promise<Customer> => {
+      const response = await requestJson<Customer>('/crm/customers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    updateCustomer: async (id: string, data: Partial<Customer>): Promise<Customer> => {
+      const response = await requestJson<Customer>(`/crm/customers/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    deleteCustomer: async (id: string): Promise<void> => {
+      await requestJson<unknown>(`/crm/customers/${id}`, { method: 'DELETE' });
+    },
+    listContacts: async (params?: { customer_id?: string; search?: string }): Promise<ListResponse<Contact>> => {
+      const query = new URLSearchParams();
+      if (params?.customer_id) query.set('customer_id', params.customer_id);
+      if (params?.search) query.set('search', params.search);
+      const qs = query.toString();
+      const response = await requestJson<ListResponse<Contact>>(`/crm/contacts${qs ? `?${qs}` : ''}`);
+      return response.data;
+    },
+    createContact: async (data: Partial<Contact>): Promise<Contact> => {
+      const response = await requestJson<Contact>('/crm/contacts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    listDeals: async (params?: { stage?: string; customer_id?: string }): Promise<ListResponse<Deal>> => {
+      const query = new URLSearchParams();
+      if (params?.stage) query.set('stage', params.stage);
+      if (params?.customer_id) query.set('customer_id', params.customer_id);
+      const qs = query.toString();
+      const response = await requestJson<ListResponse<Deal>>(`/crm/deals${qs ? `?${qs}` : ''}`);
+      return response.data;
+    },
+    createDeal: async (data: Partial<Deal>): Promise<Deal> => {
+      const response = await requestJson<Deal>('/crm/deals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    updateDeal: async (id: string, data: Partial<Deal>): Promise<Deal> => {
+      const response = await requestJson<Deal>(`/crm/deals/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    listInvoices: async (params?: { status?: string; customer_id?: string }): Promise<ListResponse<Invoice>> => {
+      const query = new URLSearchParams();
+      if (params?.status) query.set('status', params.status);
+      if (params?.customer_id) query.set('customer_id', params.customer_id);
+      const qs = query.toString();
+      const response = await requestJson<ListResponse<Invoice>>(`/crm/invoices${qs ? `?${qs}` : ''}`);
+      return response.data;
+    },
+    createInvoice: async (data: Partial<Invoice>): Promise<Invoice> => {
+      const response = await requestJson<Invoice>('/crm/invoices', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    updateInvoice: async (id: string, data: Partial<Invoice>): Promise<Invoice> => {
+      const response = await requestJson<Invoice>(`/crm/invoices/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    listTickets: async (params?: { status?: string; priority?: string; customer_id?: string }): Promise<ListResponse<SupportTicket>> => {
+      const query = new URLSearchParams();
+      if (params?.status) query.set('status', params.status);
+      if (params?.priority) query.set('priority', params.priority);
+      if (params?.customer_id) query.set('customer_id', params.customer_id);
+      const qs = query.toString();
+      const response = await requestJson<ListResponse<SupportTicket>>(`/crm/tickets${qs ? `?${qs}` : ''}`);
+      return response.data;
+    },
+    createTicket: async (data: Partial<SupportTicket>): Promise<SupportTicket> => {
+      const response = await requestJson<SupportTicket>('/crm/tickets', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    updateTicket: async (id: string, data: Partial<SupportTicket>): Promise<SupportTicket> => {
+      const response = await requestJson<SupportTicket>(`/crm/tickets/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    listProducts: async (): Promise<ListResponse<Product>> => {
+      const response = await requestJson<ListResponse<Product>>('/crm/products');
+      return response.data;
+    },
+    createProduct: async (data: Partial<Product>): Promise<Product> => {
+      const response = await requestJson<Product>('/crm/products', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+  },
+
+  // Notifications
+  notifications: {
+    list: async (params?: { is_read?: boolean; limit?: number }): Promise<ListResponse<AppNotification>> => {
+      const query = new URLSearchParams();
+      if (params?.is_read != null) query.set('is_read', String(params.is_read));
+      if (params?.limit != null) query.set('limit', String(params.limit));
+      const qs = query.toString();
+      const response = await requestJson<ListResponse<AppNotification>>(`/notifications${qs ? `?${qs}` : ''}`);
+      return response.data;
+    },
+    getUnreadCount: async (): Promise<{ count: number }> => {
+      const response = await requestJson<{ count: number }>('/notifications/unread-count');
+      return response.data;
+    },
+    markRead: async (id: string): Promise<AppNotification> => {
+      const response = await requestJson<AppNotification>(`/notifications/${id}/read`, { method: 'POST' });
+      return response.data;
+    },
+    markAllRead: async (): Promise<void> => {
+      await requestJson<unknown>('/notifications/read-all', { method: 'POST' });
+    },
+  },
+
+  // API Keys
+  apiKeys: {
+    list: async (): Promise<ListResponse<ApiKey>> => {
+      const response = await requestJson<ListResponse<ApiKey>>('/api-keys');
+      return response.data;
+    },
+    create: async (data: { name: string; scopes?: string[] }): Promise<ApiKey> => {
+      const response = await requestJson<ApiKey>('/api-keys', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    delete: async (id: string): Promise<void> => {
+      await requestJson<unknown>(`/api-keys/${id}`, { method: 'DELETE' });
+    },
   },
 };

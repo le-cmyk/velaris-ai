@@ -8,7 +8,7 @@ from sqlalchemy import text
 from app.config import client_config
 from app.database import engine
 from app.config import settings
-from app.routers import approvals, audit_logs, auth, chat, client_data, runs, tools, workspace
+from app.routers import approvals, audit_logs, auth, backend, chat, client_api, client_data, data_backend, runs, tools, workspace
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
+    app.include_router(backend.router, prefix="/backend", tags=["backend-blueprints"])
     app.include_router(chat.router, prefix="/chat", tags=["chat"])
     app.include_router(runs.router, prefix="/runs", tags=["runs"])
     app.include_router(approvals.router, prefix="/approvals", tags=["approvals"])
@@ -34,6 +35,8 @@ def create_app() -> FastAPI:
     app.include_router(tools.router, prefix="/tools", tags=["tools"])
     app.include_router(workspace.router, prefix="/workspace", tags=["workspace"])
     app.include_router(client_data.router, prefix="/client-data", tags=["client-data"])
+    app.include_router(data_backend.router, prefix="/data", tags=["data-backend"])
+    app.include_router(client_api.router, prefix="/client-api", tags=["client-api"])
 
     async def _service_health() -> dict[str, str]:
         database_status = "ok"

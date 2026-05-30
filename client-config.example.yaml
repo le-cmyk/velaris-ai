@@ -18,6 +18,22 @@ security:
     - external_api_write
 
 tools:
+  backend_blueprint:
+    enabled: true
+    readonly: true
+    description: "Turn client backend needs into routes, data objects, infrastructure, and implementation steps"
+
+  client_endpoint:
+    enabled: true
+    readonly: false
+    description: "Create and execute runtime client-specific API endpoints"
+
+  data_query:
+    enabled: true
+    readonly: true
+    description: "Query workspace-scoped Velaris data with structured filters"
+    max_rows: 200
+
   postgres_query:
     enabled: true
     readonly: true
@@ -29,12 +45,14 @@ agents:
     enabled: true
     description: "Analyze data from connected databases"
     tools:
+      - data_query
       - postgres_query
     
   - name: summarizer
     enabled: true
     description: "Summarize and report on data"
     tools:
+      - data_query
       - postgres_query
 
 workspace:

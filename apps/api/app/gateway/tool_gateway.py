@@ -7,11 +7,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import client_config
+from app.data.catalog import execute_data_query
 from app.mcp.interface import MCPInterface
 from app.mcp.tools.postgres_query import PostgresQueryTool
 from app.models.approval import ApprovalRequest
 from app.models.audit_log import AuditLog
 from app.models.tool_call import ToolCall
+from app.schemas.data_backend import DataQueryRequest
 
 SAFE_SQL_PATTERN = re.compile(r"^\s*SELECT\b", re.IGNORECASE)
 RISKY_SQL_KEYWORDS = ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE"]
@@ -37,6 +39,8 @@ class ToolGateway:
             raise ValueError(f"Tool '{tool_name}' is disabled")
         if tool_name == "postgres_query" and not arguments.get("query"):
             raise ValueError("The postgres_query tool requires a SQL query")
+        if tool_name == "data_query" and not arguments.get("table"):
+            raise ValueError("The data_query tool requires a table")
 
     async def _add_audit_log(
         self,
@@ -161,7 +165,15 @@ class ToolGateway:
                 }
 
         try:
-            result = await self.mcp_interface.call_tool(tool_name, arguments)
+            if tool_name == "data_query":
+                result_model = await execute_data_query(
+                    db,
+                    workspace_id=workspace_id,
+                    request=DataQueryRequest.model_validate(arguments),
+                )
+                result = result_model.model_dump(mode="json")
+            else:
+                result = await self.mcp_interface.call_tool(tool_name, arguments)
             tool_call.status = "executed"
             tool_call.result = result
             await self._add_audit_log(

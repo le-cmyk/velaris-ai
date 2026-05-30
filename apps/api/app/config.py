@@ -66,6 +66,11 @@ DEFAULT_CLIENT_CONFIG: dict[str, Any] = {
             "enabled": True,
             "description": "Execute a SQL query against the PostgreSQL database",
             "requires_approval": True,
+        },
+        "data_query": {
+            "enabled": True,
+            "description": "Query workspace-scoped Velaris data with structured filters",
+            "requires_approval": False,
         }
     },
 }

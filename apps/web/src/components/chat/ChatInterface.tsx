@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { getUser } from '@/lib/auth';
-import type { Message } from '@/types';
+import type { ChatMessage as Message } from '@/types';
 
 const exampleQueries = [
   'Show me the list of customers',

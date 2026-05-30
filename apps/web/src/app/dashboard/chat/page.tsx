@@ -1,5 +1,14 @@
-import { ChatInterface } from '@/components/chat/ChatInterface';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardChatPage() {
-  return <ChatInterface />;
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/dashboard/conversations');
+  }, [router]);
+
+  return null;
 }

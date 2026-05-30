@@ -4,9 +4,9 @@ import { ExecutionTimeline } from '@/components/chat/ExecutionTimeline';
 import { ToolCallCard } from '@/components/chat/ToolCallCard';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import type { Message } from '@/types';
+import type { ChatMessage } from '@/types';
 
-export function MessageBubble({ message }: { message: Message }) {
+export function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
 
   return (

@@ -13,7 +13,7 @@ from app.models.audit_log import AuditLog
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
-from app.seeds.fake_data import seed_fake_client_data
+from app.seeds.fake_data import seed_workspace_data as seed_fake_client_data
 
 router = APIRouter()
 

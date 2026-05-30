@@ -63,7 +63,7 @@ describe('frontend page rendering', () => {
 
   it('Dashboard renders', async () => {
     render(<DashboardHomePage />);
-    await waitFor(() => expect(screen.getByText(/Welcome to Demo Workspace/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Welcome to Velaris AI/i)).toBeInTheDocument());
   });
 
   it('Chat input works', async () => {

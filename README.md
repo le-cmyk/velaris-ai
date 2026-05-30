@@ -80,6 +80,8 @@ FastAPI Backend API (port 8000)
         ↓
 Agent Runtime  (intent classification → OpenRouter LLM → action parsing)
         ↓
+Velaris Data Backend (catalog → relationships → structured workspace queries)
+        ↓
 Client Data Layer (workspace-isolated records: customers, invoices, etc.)
         ↓
 Tool Gateway   (security checks, approval enforcement, audit logging)
@@ -96,6 +98,7 @@ PostgreSQL / Redis
 | `apps/web/` | Next.js 14 frontend — dashboard, chat, data, approvals, audit logs |
 | `apps/api/` | FastAPI backend — all REST endpoints, JWT auth, migrations |
 | `apps/api/app/agent/` | Agent runtime — OpenRouter LLM, action execution, intent classification |
+| `apps/api/app/data/` | Data backend — table catalog, relationship map, structured workspace queries |
 | `apps/api/app/llm/` | OpenRouter HTTP client |
 | `apps/api/app/gateway/` | Tool Gateway — SQL safety checker, approval enforcement |
 | `apps/api/app/mcp/` | MCP-ready tool abstraction + mock `postgres_query` tool |
@@ -112,6 +115,12 @@ PostgreSQL / Redis
 | GET | `/health` | Health check |
 | POST | `/auth/login` | Login, returns JWT |
 | POST | `/auth/signup` | Sign up, creates workspace + seeds data, returns JWT |
+| GET | `/backend/capabilities` | Discover what backend services Velaris can provide |
+| POST | `/backend/blueprints` | Convert a client need or requested routes into a backend plan |
+| GET | `/backend/endpoints` | List runtime client-specific endpoints |
+| POST | `/backend/endpoints` | Create a runtime client-specific endpoint |
+| PATCH | `/backend/endpoints/{id}` | Update or disable a runtime endpoint |
+| ANY | `/client-api/{path}` | Execute a client-specific endpoint created at runtime |
 | GET | `/workspace` | Workspace info |
 | POST | `/chat` | Send message to agent (OpenRouter LLM) |
 | GET | `/runs/{run_id}` | Get agent run details |
@@ -120,6 +129,9 @@ PostgreSQL / Redis
 | POST | `/client-data` | Create a record |
 | PATCH | `/client-data/{id}` | Update a record |
 | DELETE | `/client-data/{id}?confirmed=true` | Delete a record (requires `confirmed=true`) |
+| GET | `/data/catalog?include_counts=true` | Discover queryable tables, columns, and relationships |
+| GET | `/data/relationships` | Inspect table relationships for agent planning |
+| POST | `/data/query` | Query workspace-scoped data through structured filters |
 | GET | `/approvals` | List pending approvals |
 | POST | `/approvals/{id}/approve` | Approve a pending action |
 | POST | `/approvals/{id}/reject` | Reject a pending action |
@@ -209,9 +221,103 @@ client:
   environment: production
 
 tools:
+  data_query:
+    enabled: true
+
   postgres_query:
     enabled: true
 ```
+
+The `data_query` tool is the preferred agent-facing interface because it enforces workspace isolation and uses structured filters instead of raw SQL. Keep `postgres_query` for deeper diagnostics and administrative workflows that need explicit SQL safety checks.
+
+### Backend blueprints
+
+Future clients or agents can start with plain language, explicit route requests, or both:
+
+```json
+{
+  "description": "We need a customer support backend with tickets, customers, dashboards, and scheduled syncs.",
+  "requested_routes": [
+    { "method": "GET", "path": "/support/tickets", "purpose": "List tickets" }
+  ],
+  "data_entities": [
+    { "name": "ticket", "fields": ["customer_id", "status", "priority"] }
+  ],
+  "infrastructure": ["worker"]
+}
+```
+
+Velaris returns proposed routes, mapped data objects, infrastructure, implementation steps, and open questions. This gives future agents a stable handoff: explain the backend, inspect the blueprint, then implement only the missing pieces.
+
+### Runtime client endpoints
+
+When a client needs a dedicated route immediately, an agent can register it without redeploying Velaris:
+
+```json
+{
+  "name": "Smart Support Triage",
+  "method": "POST",
+  "path": "/support/triage",
+  "mode": "agent_task",
+  "description": "Route an API request to a Velaris agent that performs the needed backend work",
+  "config": {
+    "instruction": "Triage the request, inspect existing customer/ticket data, create or update records when needed, and return the client-facing result.",
+    "allowed_tools": ["data_query", "client_data_create"],
+    "response": "Return JSON with status, ticket/customer references, and next action."
+  }
+}
+```
+
+That definition is executed at:
+
+```text
+POST /client-api/support/triage
+```
+
+In `agent_task` mode, there is no dedicated handwritten handler behind the route. Velaris creates an agent run with the endpoint contract, query params, request body, allowed tools, and instructions. The agent then chooses the right data, system, tool, or function to satisfy the API request.
+
+For deterministic read endpoints, agents can register `data_query` routes:
+
+```json
+{
+  "name": "Active Customers API",
+  "method": "GET",
+  "path": "/customers/active",
+  "mode": "data_query",
+  "description": "Dedicated client route for active customers",
+  "config": {
+    "table": "customers",
+    "select": ["id", "name", "email", "status", "mrr"],
+    "filters": [{ "field": "status", "op": "eq", "value": "active" }],
+    "allowed_filter_fields": ["country", "tier"],
+    "limit": 100
+  }
+}
+```
+
+That definition is executed at:
+
+```text
+GET /client-api/customers/active?country=US
+```
+
+For simple writes into flexible client data, agents can create `client_data_create` endpoints:
+
+```json
+{
+  "name": "Create Lead",
+  "method": "POST",
+  "path": "/leads",
+  "mode": "client_data_create",
+  "config": {
+    "type": "lead",
+    "title_field": "company",
+    "content_field": "notes"
+  }
+}
+```
+
+All runtime endpoints are authenticated, workspace-scoped, audited, and can be disabled through `PATCH /backend/endpoints/{id}`.
 
 ---
 
@@ -295,4 +401,3 @@ velaris-ai/
 | `demo@velaris.ai` | `demo123` | Admin |
 
 > **Note:** Change the demo password and `JWT_SECRET` before any non-local deployment.
-

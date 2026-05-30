@@ -287,6 +287,14 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
 
   if (!response.ok) {
     const detail = getResponseDetail(data);
+
+    // Auto-clear auth and redirect to login on 401
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('velaris_token');
+      localStorage.removeItem('velaris_user');
+      window.location.href = '/login';
+    }
+
     const apiError = new ApiRequestError(buildFailedRequestMessage(requestUrl, response.status, response.statusText, detail), {
       requestUrl,
       status: response.status,

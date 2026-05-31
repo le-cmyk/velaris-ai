@@ -1,6 +1,8 @@
 import { Bot, User2 } from 'lucide-react';
 
+import { ExecutionTimeline } from '@/components/chat/ExecutionTimeline';
 import { ToolCallCard } from '@/components/chat/ToolCallCard';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { ChatMessage } from '@/types';
 
@@ -23,16 +25,34 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           <CardContent className="space-y-5 p-5">
             <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{message.content}</p>
 
-            {message.chatResponse?.tool_calls.length ? (
+            {message.chatResponse ? (
               <div className="space-y-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-slate-900">Tool calls</h4>
-                  <div className="space-y-3">
-                    {message.chatResponse.tool_calls.map((toolCall, index) => (
-                      <ToolCallCard key={`${toolCall.tool_name}-${index}`} toolCall={toolCall} />
-                    ))}
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">Intent: {message.chatResponse.intent}</Badge>
+                  <Badge variant={message.chatResponse.pending_approvals.length > 0 ? 'warning' : 'success'}>
+                    {message.chatResponse.status}
+                  </Badge>
+                  {message.chatResponse.pending_approvals.length > 0 ? (
+                    <Badge variant="warning">{message.chatResponse.pending_approvals.length} approvals pending</Badge>
+                  ) : null}
                 </div>
+
+                <ExecutionTimeline
+                  intent={message.chatResponse.intent}
+                  executionPlan={message.chatResponse.execution_plan}
+                  toolCallsCount={message.chatResponse.tool_calls.length}
+                />
+
+                {message.chatResponse.tool_calls.length > 0 ? (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-slate-900">Tool calls</h4>
+                    <div className="space-y-3">
+                      {message.chatResponse.tool_calls.map((toolCall, index) => (
+                        <ToolCallCard key={`${toolCall.tool_name}-${index}`} toolCall={toolCall} />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </CardContent>

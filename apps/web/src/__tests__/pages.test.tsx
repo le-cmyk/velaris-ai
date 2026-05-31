@@ -5,6 +5,7 @@ import AuditLogsPage from '@/app/dashboard/audit-logs/page';
 import ApprovalsPage from '@/app/dashboard/approvals/page';
 import DebugApiPage from '@/app/debug-api/page';
 import DashboardHomePage from '@/app/dashboard/page';
+import RoutesPage from '@/app/dashboard/routes/page';
 import LoginPage from '@/app/login/page';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 
@@ -25,6 +26,7 @@ jest.mock('@/lib/auth', () => ({
   saveToken: jest.fn(),
   saveUser: jest.fn(),
   getUser: jest.fn(() => ({ workspace_id: 'workspace-1' })),
+  getToken: jest.fn(() => 'test-token-1234567890'),
 }));
 
 jest.mock('@/lib/api', () => ({
@@ -50,6 +52,43 @@ jest.mock('@/lib/api', () => ({
       pending_approvals: [],
       status: 'completed',
     })),
+    clientEndpoints: {
+      list: jest.fn(async () => ({
+        total: 1,
+        items: [
+          {
+            id: 'endpoint-1',
+            workspace_id: 'workspace-1',
+            created_by_id: 'user-1',
+            name: 'Support triage',
+            method: 'POST',
+            path: '/support/triage',
+            mode: 'agent_task',
+            description: 'Route support requests to an agent',
+            config: { instruction: 'Triage support requests' },
+            is_active: true,
+            created_at: '2026-05-29T00:00:00.000Z',
+            updated_at: '2026-05-29T00:00:00.000Z',
+          },
+        ],
+      })),
+      create: jest.fn(async () => ({
+        id: 'endpoint-2',
+        workspace_id: 'workspace-1',
+        created_by_id: 'user-1',
+        name: 'Created route',
+        method: 'POST',
+        path: '/created',
+        mode: 'agent_task',
+        description: null,
+        config: {},
+        is_active: true,
+        created_at: '2026-05-29T00:00:00.000Z',
+        updated_at: '2026-05-29T00:00:00.000Z',
+      })),
+      update: jest.fn(),
+      execute: jest.fn(async () => ({ status: 'ok' })),
+    },
   },
 }));
 
@@ -72,6 +111,14 @@ describe('frontend page rendering', () => {
     const input = screen.getByPlaceholderText(/Ask Velaris AI/i);
     await user.type(input, 'hello world');
     expect(input).toHaveValue('hello world');
+  });
+
+  it('Routes page renders endpoint auth and testing surface', async () => {
+    render(<RoutesPage />);
+    await waitFor(() => expect(screen.getByText(/Agent route console/i)).toBeInTheDocument());
+    expect(screen.getByText(/Token and authentication/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Support triage/i)).toBeInTheDocument());
+    expect(screen.getByText(/Test route/i)).toBeInTheDocument();
   });
 
   it('Approval panel renders', async () => {

@@ -91,6 +91,29 @@ export interface ClientDataListResponse {
   total: number;
 }
 
+export type ClientEndpointMode = 'agent_task' | 'data_query' | 'client_data_create';
+export type ClientEndpointMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+
+export interface ClientEndpoint {
+  id: string;
+  workspace_id: string;
+  created_by_id: string | null;
+  name: string;
+  method: ClientEndpointMethod;
+  path: string;
+  mode: ClientEndpointMode;
+  description: string | null;
+  config: Record<string, unknown>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientEndpointListResponse {
+  items: ClientEndpoint[];
+  total: number;
+}
+
 // ── CRM ──────────────────────────────────────────────────────────────────────
 export interface Customer {
   id: string

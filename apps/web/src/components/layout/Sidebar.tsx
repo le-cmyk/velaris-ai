@@ -12,6 +12,7 @@ import {
   Key,
   LayoutDashboard,
   MessageSquare,
+  Route,
   ScrollText,
   Settings,
   Users,
@@ -27,6 +28,7 @@ const navSections = [
     items: [
       { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
       { href: '/dashboard/conversations', label: 'Conversations', icon: MessageSquare },
+      { href: '/dashboard/routes', label: 'Routes', icon: Route },
       { href: '/dashboard/agent-library', label: 'Agent Library', icon: Bot },
       { href: '/dashboard/scheduler', label: 'Scheduler', icon: Clock },
     ],

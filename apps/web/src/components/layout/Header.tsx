@@ -17,6 +17,10 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: 'Conversations',
     subtitle: 'Manage and continue AI-powered conversations.',
   },
+  '/dashboard/routes': {
+    title: 'Routes',
+    subtitle: 'Create, inspect, authenticate, and test agent-backed API routes.',
+  },
   '/dashboard/agent-library': {
     title: 'Agent Library',
     subtitle: 'Browse, configure, and deploy AI agent templates.',

@@ -1,9 +1,12 @@
 """Unit tests for the agent runtime: intent classification and execution planning."""
 
 import pytest
+from unittest.mock import AsyncMock, MagicMock
+import uuid
 
 from app.agent.intents import Intent
-from app.agent.runtime import classify_intent, build_execution_plan
+from app.agent.runtime import _execute_action, classify_intent, build_execution_plan
+from app.models.client_endpoint import ClientEndpoint
 
 
 class TestIntentClassification:
@@ -52,6 +55,10 @@ class TestIntentClassification:
         assert classify_intent("LIST all products") == Intent.DATABASE_READ
         assert classify_intent("SUMMARIZE revenue") == Intent.SUMMARIZE_DATA
 
+    def test_create_route_is_database_write_request(self) -> None:
+        assert classify_intent("create a route for support triage") == Intent.DATABASE_WRITE_REQUEST
+        assert classify_intent("add an API endpoint for leads") == Intent.DATABASE_WRITE_REQUEST
+
 
 class TestExecutionPlan:
     """Tests for build_execution_plan()."""
@@ -83,3 +90,35 @@ class TestExecutionPlan:
         plan = build_execution_plan(Intent.DATABASE_READ)
         assert isinstance(plan["steps"], list)
         assert len(plan["steps"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_execute_create_client_endpoint_action() -> None:
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.flush = AsyncMock()
+    workspace_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+
+    message, requires_approval = await _execute_action(
+        {
+            "action": "create_client_endpoint",
+            "name": "Support triage",
+            "method": "POST",
+            "path": "/support/triage",
+            "mode": "agent_task",
+            "description": "Route support requests to an agent",
+            "config": {"instruction": "Triage support requests"},
+        },
+        workspace_id,
+        user_id,
+        db,
+        uuid.uuid4(),
+    )
+
+    assert requires_approval is False
+    assert "POST /client-api/support/triage" in message
+    created_endpoint = next(call.args[0] for call in db.add.call_args_list if isinstance(call.args[0], ClientEndpoint))
+    assert created_endpoint.workspace_id == workspace_id
+    assert created_endpoint.created_by_id == user_id
+    assert created_endpoint.mode == "agent_task"

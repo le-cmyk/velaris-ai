@@ -14,16 +14,23 @@ from app.llm.openrouter import OpenRouterError, chat_completion
 from app.models.agent_run import AgentRun
 from app.models.audit_log import AuditLog
 from app.models.client_data import ClientDataRecord
+from app.models.client_endpoint import ClientEndpoint
 
 logger = logging.getLogger(__name__)
 
 READ_KEYWORDS = ("select", "show", "list", "get", "fetch", "find")
 WRITE_KEYWORDS = ("insert", "update", "delete", "write", "create", "remove", "drop", "alter", "truncate")
+ROUTE_REQUEST_KEYWORDS = ("route", "endpoint", "api")
+ROUTE_ACTION_KEYWORDS = ("add", "build", "create", "make", "register")
 SUMMARY_KEYWORDS = ("summarize", "summary", "report")
 
 _SYSTEM_PROMPT = """You are the Velaris AI operations assistant. You help users manage and query their business data.
 
 You have access to the user's workspace records. Each record has: id, type, title, content, metadata.
+
+You can also help users create API routes for their workspace. When a user says things like
+"create an endpoint", "make a route", "I need a GET route", "add an API for leads", or
+"let my app call /client-api/...", treat it as a route creation request.
 
 ALLOWED ACTIONS (respond with JSON when you want to perform an action):
 - list_records: {"action": "list_records", "type": "<optional type filter>"}
@@ -32,10 +39,15 @@ ALLOWED ACTIONS (respond with JSON when you want to perform an action):
 - create_record: {"action": "create_record", "type": "<type>", "title": "<title>", "content": "<content>"}
 - update_record: {"action": "update_record", "id": "<uuid>", "title": "<optional>", "content": "<optional>"}
 - delete_record: {"action": "delete_record", "id": "<uuid>", "confirm": true}
+- create_client_endpoint: {"action": "create_client_endpoint", "name": "<route name>", "method": "GET|POST|PATCH|PUT|DELETE", "path": "/your/path", "mode": "agent_task|data_query|client_data_create", "description": "<what the route does>", "config": {...}}
 
 IMPORTANT:
 - For delete_record you MUST include "confirm": true only if the user explicitly confirmed deletion.
 - If the user asks to delete but hasn't confirmed, respond with a natural language message asking for confirmation instead of JSON.
+- Prefer create_client_endpoint with mode="agent_task" when the user wants a smart API route where the agent decides the right backend work.
+- Prefer mode="data_query" for deterministic read endpoints and include config.table, optional config.select, config.filters, config.allowed_filter_fields, and config.limit.
+- Prefer mode="client_data_create" for simple write endpoints into flexible client records and include config.type plus title/content field mappings.
+- Created routes are called under /client-api{path}. They require the same Bearer token as the Velaris API.
 - For normal questions or analysis, respond with plain text.
 - When returning JSON actions, respond with ONLY the JSON object, nothing else.
 - Record types include: customer, invoice, support_ticket, task, contract, company_note, product_usage.
@@ -48,6 +60,10 @@ def classify_intent(message: str) -> Intent:
     lowered = message.lower()
     if any(keyword in lowered for keyword in SUMMARY_KEYWORDS):
         return Intent.SUMMARIZE_DATA
+    if any(keyword in lowered for keyword in ROUTE_REQUEST_KEYWORDS) and any(
+        keyword in lowered for keyword in ROUTE_ACTION_KEYWORDS
+    ):
+        return Intent.DATABASE_WRITE_REQUEST
     if any(keyword in lowered for keyword in WRITE_KEYWORDS):
         return Intent.DATABASE_WRITE_REQUEST
     if any(keyword in lowered for keyword in READ_KEYWORDS):
@@ -257,6 +273,47 @@ async def _execute_action(
         await db.delete(record)
         await db.flush()
         return f"Deleted record: **{title}** (id: {record_id})", False
+
+    if action == "create_client_endpoint":
+        method = str(action_data.get("method", "GET")).upper()
+        path = "/" + str(action_data.get("path", "")).strip().strip("/")
+        mode = str(action_data.get("mode", "agent_task"))
+        if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
+            return f"Unsupported endpoint method: {method}", False
+        if path == "/":
+            return "create_client_endpoint requires a non-root path.", False
+        if path.startswith(("/backend", "/auth", "/data", "/client-data", "/client-api")):
+            return "Endpoint path uses a reserved Velaris prefix. Choose a client-specific path like /support/triage.", False
+        if mode not in {"agent_task", "data_query", "client_data_create"}:
+            return f"Unsupported endpoint mode: {mode}", False
+
+        endpoint = ClientEndpoint(
+            id=uuid.uuid4(),
+            workspace_id=workspace_id,
+            created_by_id=user_id,
+            name=action_data.get("name") or f"{method} {path}",
+            method=method,
+            path=path,
+            mode=mode,
+            description=action_data.get("description"),
+            config=action_data.get("config") or {},
+            is_active=True,
+        )
+        db.add(endpoint)
+        await db.flush()
+        db.add(AuditLog(
+            workspace_id=workspace_id,
+            user_id=user_id,
+            action="agent.create_client_endpoint",
+            resource_type="client_endpoint",
+            resource_id=str(endpoint.id),
+            details={"method": method, "path": path, "mode": mode, "config": endpoint.config},
+        ))
+        await db.flush()
+        return (
+            f"Created client API route **{method} /client-api{path}** using `{mode}` mode. "
+            "Use the workspace Bearer token in the Authorization header to call it."
+        ), False
 
     return f"Unknown action: {action}", False
 

@@ -7,6 +7,10 @@ import type {
   ChatResponse,
   ClientDataRecord,
   ClientDataListResponse,
+  ClientEndpoint,
+  ClientEndpointListResponse,
+  ClientEndpointMethod,
+  ClientEndpointMode,
   Contact,
   Conversation,
   CrmStats,
@@ -475,6 +479,49 @@ export const api = {
 
   deleteClientData: async (id: string): Promise<void> => {
     await requestJson<unknown>(`/client-data/${id}?confirmed=true`, { method: 'DELETE' });
+  },
+
+  clientEndpoints: {
+    list: async (): Promise<ClientEndpointListResponse> => {
+      const response = await requestJson<ClientEndpointListResponse>('/backend/endpoints');
+      return response.data;
+    },
+    create: async (data: {
+      name: string;
+      method: ClientEndpointMethod;
+      path: string;
+      mode: ClientEndpointMode;
+      description?: string;
+      config?: Record<string, unknown>;
+      is_active?: boolean;
+    }): Promise<ClientEndpoint> => {
+      const response = await requestJson<ClientEndpoint>('/backend/endpoints', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    update: async (
+      id: string,
+      data: { name?: string; description?: string; config?: Record<string, unknown>; is_active?: boolean },
+    ): Promise<ClientEndpoint> => {
+      const response = await requestJson<ClientEndpoint>(`/backend/endpoints/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      return response.data;
+    },
+    execute: async (
+      endpoint: Pick<ClientEndpoint, 'method' | 'path'>,
+      options: { query?: string; body?: string } = {},
+    ): Promise<unknown> => {
+      const suffix = options.query?.trim() ? `?${options.query.trim().replace(/^\?/, '')}` : '';
+      const response = await requestJson<unknown>(`/client-api${endpoint.path}${suffix}`, {
+        method: endpoint.method,
+        body: ['GET', 'DELETE'].includes(endpoint.method) ? undefined : options.body || '{}',
+      });
+      return response.data;
+    },
   },
 
   // Conversations
